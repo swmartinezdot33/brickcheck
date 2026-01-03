@@ -9,6 +9,7 @@ import { AddItemModal } from '@/components/collection/AddItemModal'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
+import { ImportCollection } from '@/components/collection/ImportCollection'
 
 export default function CollectionPage() {
   const [editingItem, setEditingItem] = useState<CollectionItemWithSet | null>(null)
@@ -16,19 +17,22 @@ export default function CollectionPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
             My Collection
           </h1>
           <p className="text-muted-foreground">Manage your LEGO sets</p>
         </div>
-        <Button asChild>
-          <Link href="/browse">
-            <Plus className="h-4 w-4 mr-2" />
-            Browse & Add Sets
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ImportCollection />
+          <Button asChild>
+            <Link href="/browse">
+              <Plus className="h-4 w-4 mr-2" />
+              Browse & Add Sets
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/20">

@@ -1,10 +1,22 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { BrowserQRCodeReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Camera, CameraOff, Loader2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Camera, CameraOff } from 'lucide-react'
+
+interface DetectedCode {
+  id: string // Unique ID for this code (code + format)
+  code: string
+  format: BarcodeFormat
+  x: number // Center X coordinate (0-1 normalized)
+  y: number // Center Y coordinate (0-1 normalized)
+  width: number // Width (0-1 normalized)
+  height: number // Height (0-1 normalized)
+  timestamp: number
+}
 
 export function BarcodeScanner({
   onScan,
@@ -14,9 +26,56 @@ export function BarcodeScanner({
   onError?: (error: Error) => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
+  const [detectedCodes, setDetectedCodes] = useState<Map<string, DetectedCode>>(new Map())
+  const pruningIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Format display names
+  const getFormatName = (format: BarcodeFormat): string => {
+    const formatMap: Record<string, string> = {
+      [BarcodeFormat.QR_CODE]: 'QR',
+      [BarcodeFormat.DATA_MATRIX]: 'Data Matrix',
+      [BarcodeFormat.EAN_13]: 'EAN-13',
+      [BarcodeFormat.EAN_8]: 'EAN-8',
+      [BarcodeFormat.UPC_A]: 'UPC-A',
+      [BarcodeFormat.UPC_E]: 'UPC-E',
+      [BarcodeFormat.CODE_128]: 'Code 128',
+      [BarcodeFormat.CODE_39]: 'Code 39',
+    }
+    return formatMap[format] || format.toString()
+  }
+
+  // Prune stale codes (not seen for > 1 second)
+  useEffect(() => {
+    if (isScanning) {
+      pruningIntervalRef.current = setInterval(() => {
+        setDetectedCodes((prev) => {
+          const now = Date.now()
+          const updated = new Map(prev)
+          for (const [id, code] of updated.entries()) {
+            if (now - code.timestamp > 1000) {
+              updated.delete(id)
+            }
+          }
+          return updated
+        })
+      }, 500) // Check every 500ms
+    } else {
+      if (pruningIntervalRef.current) {
+        clearInterval(pruningIntervalRef.current)
+        pruningIntervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (pruningIntervalRef.current) {
+        clearInterval(pruningIntervalRef.current)
+      }
+    }
+  }, [isScanning])
 
   useEffect(() => {
     return () => {
@@ -24,21 +83,64 @@ export function BarcodeScanner({
       if (codeReaderRef.current) {
         codeReaderRef.current.reset()
       }
+      if (pruningIntervalRef.current) {
+        clearInterval(pruningIntervalRef.current)
+      }
     }
+  }, [])
+
+  // Calculate coordinate mapping from video source to display
+  const getCoordinateMapping = useCallback(() => {
+    if (!videoRef.current || !containerRef.current) {
+      return { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 }
+    }
+
+    const video = videoRef.current
+    const container = containerRef.current
+
+    // Get video's natural dimensions (source resolution)
+    const videoWidth = video.videoWidth || 1280
+    const videoHeight = video.videoHeight || 720
+
+    // Get displayed dimensions
+    const displayWidth = container.clientWidth
+    const displayHeight = container.clientHeight
+
+    // Calculate scale factors
+    const scaleX = displayWidth / videoWidth
+    const scaleY = displayHeight / videoHeight
+
+    return { scaleX, scaleY, offsetX: 0, offsetY: 0 }
   }, [])
 
   const startScanning = async () => {
     try {
       setError(null)
       setIsScanning(true)
+      setDetectedCodes(new Map())
 
       // Check if we're on HTTPS (required for camera access)
       if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
         throw new Error('Camera access requires HTTPS. Please use the production URL.')
       }
 
-      const codeReader = new BrowserQRCodeReader()
+      const codeReader = new BrowserMultiFormatReader()
       codeReaderRef.current = codeReader
+
+      // Configure hints - prioritize QR/Data Matrix but allow all formats
+      const hints = new Map()
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.DATA_MATRIX,
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+      ])
+      hints.set(DecodeHintType.TRY_HARDER, true)
+      codeReader.hints = hints
 
       // Get available video input devices
       const videoInputDevices = await codeReader.listVideoInputDevices()
@@ -72,44 +174,68 @@ export function BarcodeScanner({
         throw new Error('Camera permission denied. Please allow camera access and try again.')
       }
 
-      // BrowserQRCodeReader only scans QR codes, so no need for format hints
-
-      let lastDetectedCode = ''
-      let detectionCount = 0
-      const REQUIRED_DETECTIONS = 2 // Require 2 detections of same code to confirm
-
-      // Start continuous decoding
+      // Start continuous decoding - don't auto-confirm
       codeReader.decodeFromVideoDevice(
         selectedDeviceId,
         videoRef.current,
         (result, err) => {
           if (result) {
-            // Verify it's actually a QR code (BrowserQRCodeReader should only return QR codes, but double-check)
             const format = result.getBarcodeFormat()
-            if (format === BarcodeFormat.QR_CODE) {
-              const code = result.getText().trim()
-              // Clean up the code (remove spaces, validate)
-              const cleanCode = code.replace(/\s+/g, '')
+            const code = result.getText().trim()
+            const cleanCode = code.replace(/\s+/g, '')
+
+            if (cleanCode && cleanCode.length > 0) {
+              // Get result points (corners of the barcode)
+              const resultPoints = result.getResultPoints()
               
-              // QR codes can contain any text, so we accept any non-empty code
-              if (cleanCode && cleanCode.length > 0) {
-                if (cleanCode === lastDetectedCode) {
-                  detectionCount++
-                  // Only process after multiple confirmations to avoid false positives
-                  if (detectionCount >= REQUIRED_DETECTIONS) {
-                    console.log('QR code confirmed:', cleanCode)
-                    stopScanning()
-                    onScan(cleanCode)
-                  }
-                } else {
-                  // New code detected, reset counter
-                  lastDetectedCode = cleanCode
-                  detectionCount = 1
+              if (resultPoints && resultPoints.length >= 2) {
+                // Calculate bounding box from result points
+                let minX = Infinity
+                let maxX = -Infinity
+                let minY = Infinity
+                let maxY = -Infinity
+
+                for (const point of resultPoints) {
+                  const x = point.getX()
+                  const y = point.getY()
+                  minX = Math.min(minX, x)
+                  maxX = Math.max(maxX, x)
+                  minY = Math.min(minY, y)
+                  maxY = Math.max(maxY, y)
+                }
+
+                // Get video dimensions for normalization
+                const video = videoRef.current
+                if (video) {
+                  const videoWidth = video.videoWidth || 1280
+                  const videoHeight = video.videoHeight || 720
+
+                  // Normalize coordinates to 0-1 range
+                  const centerX = ((minX + maxX) / 2) / videoWidth
+                  const centerY = ((minY + maxY) / 2) / videoHeight
+                  const width = (maxX - minX) / videoWidth
+                  const height = (maxY - minY) / videoHeight
+
+                  // Create unique ID for this code
+                  const codeId = `${cleanCode}_${format}`
+
+                  // Update detected codes
+                  setDetectedCodes((prev) => {
+                    const updated = new Map(prev)
+                    updated.set(codeId, {
+                      id: codeId,
+                      code: cleanCode,
+                      format: format, // Store as BarcodeFormat enum
+                      x: centerX,
+                      y: centerY,
+                      width: Math.max(width, 0.1), // Minimum width for visibility
+                      height: Math.max(height, 0.05), // Minimum height for visibility
+                      timestamp: Date.now(),
+                    })
+                    return updated
+                  })
                 }
               }
-            } else {
-              // Ignore non-QR codes (shouldn't happen with BrowserQRCodeReader, but just in case)
-              console.debug('Ignoring non-QR code format:', format)
             }
           }
           if (err) {
@@ -117,7 +243,6 @@ export function BarcodeScanner({
             if (
               err.name !== 'NotFoundException' &&
               err.name !== 'NoBarcodeDetectedException' &&
-              !err.message?.includes('No MultiFormat Readers') &&
               !err.message?.includes('No barcode detected')
             ) {
               // Only log occasionally to avoid console spam
@@ -157,16 +282,31 @@ export function BarcodeScanner({
     }
     
     setIsScanning(false)
+    setDetectedCodes(new Map())
   }
+
+  const handleCodeClick = (code: DetectedCode) => {
+    console.log('Code selected:', code.code, code.format)
+    stopScanning()
+    onScan(code.code)
+  }
+
+  const mapping = getCoordinateMapping()
+  const codesArray = Array.from(detectedCodes.values())
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Barcode Scanner</CardTitle>
-        <CardDescription>Point your camera at a QR code (linear barcodes are ignored)</CardDescription>
+        <CardDescription>
+          Point your camera at barcodes. Tap a detected code to select it.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+        <div 
+          ref={containerRef}
+          className="relative aspect-video bg-black rounded-lg overflow-hidden"
+        >
           <video
             ref={videoRef}
             className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`}
@@ -177,6 +317,44 @@ export function BarcodeScanner({
           {!isScanning && (
             <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
               <CameraOff className="h-12 w-12" />
+            </div>
+          )}
+
+          {/* Overlay layer for detected codes */}
+          {isScanning && (
+            <div className="absolute inset-0 pointer-events-none">
+              {codesArray.map((code) => {
+                // Calculate display coordinates
+                const displayX = code.x * 100 // Convert to percentage
+                const displayY = code.y * 100
+                const displayWidth = code.width * 100
+                const displayHeight = code.height * 100
+
+                return (
+                  <button
+                    key={code.id}
+                    onClick={() => handleCodeClick(code)}
+                    className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-105"
+                    style={{
+                      left: `${displayX}%`,
+                      top: `${displayY}%`,
+                      minWidth: '80px',
+                    }}
+                  >
+                    <Badge 
+                      variant="default" 
+                      className="bg-primary/90 hover:bg-primary text-white shadow-lg border-2 border-white/50 px-3 py-1.5 text-xs font-semibold cursor-pointer"
+                    >
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="font-bold">{getFormatName(code.format)}</span>
+                        <span className="text-[10px] opacity-90 truncate max-w-[120px]">
+                          {code.code.length > 12 ? `${code.code.substring(0, 12)}...` : code.code}
+                        </span>
+                      </div>
+                    </Badge>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -202,11 +380,15 @@ export function BarcodeScanner({
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Make sure to allow camera access when prompted. The scanner will only detect
-          QR codes (linear barcodes are ignored).
+          Make sure to allow camera access when prompted. Multiple codes will appear as overlays - tap the one you want to scan.
         </p>
+
+        {isScanning && codesArray.length > 0 && (
+          <div className="text-xs text-muted-foreground text-center">
+            {codesArray.length} code{codesArray.length !== 1 ? 's' : ''} detected
+          </div>
+        )}
       </CardContent>
     </Card>
   )
 }
-
