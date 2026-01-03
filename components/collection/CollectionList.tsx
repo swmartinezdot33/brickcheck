@@ -44,7 +44,14 @@ export function CollectionList({ onEdit, retiredFilter = 'all' }: CollectionList
         {[1, 2, 3].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-6">
-              <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -98,8 +105,27 @@ export function CollectionList({ onEdit, retiredFilter = 'all' }: CollectionList
       {filteredData.map((item) => (
         <Card key={item.id}>
           <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
+            <div className="flex items-start justify-between gap-4">
+              {/* Thumbnail Image */}
+              {item.sets?.image_url ? (
+                <div className="flex-shrink-0">
+                  <img
+                    src={item.sets.image_url}
+                    alt={item.sets.name || 'Set image'}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-primary/10"
+                    onError={(e) => {
+                      // Hide image if it fails to load
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-muted flex items-center justify-center border-2 border-primary/10">
+                  <Package className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
+                </div>
+              )}
+              
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <h3 className="font-semibold text-lg">
                     {item.sets?.name || 'Unknown Set'}
