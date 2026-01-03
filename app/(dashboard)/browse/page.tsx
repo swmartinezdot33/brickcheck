@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, Loader2, Package, ExternalLink, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Loader2, Package, ExternalLink, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
 import { Set } from '@/types'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
@@ -25,6 +25,7 @@ export default function BrowsePage() {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [itemsPerPage, setItemsPerPage] = useState(25)
   const [currentPage, setCurrentPage] = useState(1)
+  const [retiredFilter, setRetiredFilter] = useState<'all' | 'active' | 'retired'>('all')
 
   // Real-time search as user types (debounced by React Query)
   const { data, isLoading, error } = useQuery({
@@ -53,28 +54,45 @@ export default function BrowsePage() {
     setSelectedSet(null)
   }
 
+  // Filter by retired status
+  const filteredData = useMemo(() => {
+    if (!data) return []
+    
+    return data.filter((set) => {
+      if (retiredFilter === 'retired') return set.retired === true
+      if (retiredFilter === 'active') return set.retired !== true
+      return true // 'all'
+    })
+  }, [data, retiredFilter])
+
   // Calculate pagination
   const paginatedData = useMemo(() => {
-    if (!data) return { items: [], total: 0, totalPages: 0, start: 0, end: 0 }
+    if (!filteredData) return { items: [], total: 0, totalPages: 0, start: 0, end: 0 }
 
-    const total = data.length
+    const total = filteredData.length
     const itemsToShow = itemsPerPage === -1 ? total : itemsPerPage
     const totalPages = Math.ceil(total / itemsToShow)
     const start = (currentPage - 1) * itemsToShow
     const end = Math.min(start + itemsToShow, total)
 
     return {
-      items: data.slice(start, end),
+      items: filteredData.slice(start, end),
       total,
       totalPages,
       start,
       end,
     }
-  }, [data, itemsPerPage, currentPage])
+  }, [filteredData, itemsPerPage, currentPage])
 
   // Reset to page 1 when items per page changes
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(parseInt(value))
+    setCurrentPage(1)
+  }
+
+  // Reset to page 1 when filter changes
+  const handleRetiredFilterChange = (value: 'all' | 'active' | 'retired') => {
+    setRetiredFilter(value)
     setCurrentPage(1)
   }
 
@@ -136,7 +154,7 @@ export default function BrowsePage() {
         </Card>
       )}
 
-      {!isLoading && !error && query.length >= 2 && (!data || data.length === 0) && (
+      {!isLoading && !error && query.length >= 2 && (!filteredData || filteredData.length === 0) && (
         <Card>
           <CardContent className="p-12 text-center">
             <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -155,19 +173,38 @@ export default function BrowsePage() {
               <h2 className="text-2xl font-semibold">
                 <span className="text-gradient-lego">{paginatedData.total.toLocaleString()}</span> {paginatedData.total === 1 ? 'Set' : 'Sets'} Found
               </h2>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Results per page:</span>
-                <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                    <SelectItem value="-1">All</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Retired/Active Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Select value={retiredFilter} onValueChange={(value: any) => handleRetiredFilterChange(value)}>
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Results Per Page */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Per page:</span>
+                  <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="-1">All</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
