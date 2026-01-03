@@ -64,6 +64,28 @@ export default function SetDetailPage({
         )}
       </div>
 
+      {set.image_url && (
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-yellow-50/30 to-transparent dark:from-yellow-950/20">
+          <CardContent className="p-6">
+            <div className="max-w-md mx-auto">
+              <img
+                src={set.image_url}
+                alt={set.name}
+                className="w-full h-auto rounded-lg"
+                onError={(e) => {
+                  // Show placeholder if image fails to load
+                  e.currentTarget.style.display = 'none'
+                  const placeholder = document.createElement('div')
+                  placeholder.className = 'w-full aspect-square bg-muted rounded-lg flex items-center justify-center text-muted-foreground'
+                  placeholder.textContent = 'Image not available'
+                  e.currentTarget.parentElement!.appendChild(placeholder)
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="sealed" className="space-y-4">
         <TabsList>
           <TabsTrigger value="sealed">Sealed</TabsTrigger>

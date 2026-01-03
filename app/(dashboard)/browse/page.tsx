@@ -264,15 +264,24 @@ export default function BrowsePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {set.image_url && (
-                      <div className="aspect-square w-full bg-muted rounded-lg overflow-hidden mb-2">
+                    <div className="aspect-square w-full bg-muted rounded-lg overflow-hidden mb-2">
+                      {set.image_url ? (
                         <img
                           src={set.image_url}
                           alt={set.name}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Hide image if it fails to load
+                            e.currentTarget.style.display = 'none'
+                            e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>'
+                          }}
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                          No Image
+                        </div>
+                      )}
+                    </div>
                     {set.piece_count && (
                       <p className="text-sm text-muted-foreground">
                         {set.piece_count.toLocaleString()} pieces
