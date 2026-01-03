@@ -13,69 +13,92 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    // First, try searching the database for existing sets
-    // Use textSearch or multiple queries for better compatibility
-    const searchPattern = `%${query}%`
+    // ALWAYS call APIs first to get real data, then merge with database
+    // This ensures we get fresh results from APIs, not just cached seed data
+    console.log(`[searchSets] Searching for: "${query}"`)
     
-    // Try multiple queries and combine results
+    let apiResults: any[] = []
+    try {
+      const catalogProvider = getCatalogProvider()
+      console.log(`[searchSets] Calling API providers...`)
+      apiResults = await catalogProvider.searchSets(query)
+      console.log(`[searchSets] API returned ${apiResults.length} results`)
+    } catch (providerError) {
+      console.error('[searchSets] Catalog provider error:', providerError)
+      // If API fails, we'll fall back to database results below
+    }
+
+    // Also check database for any additional results
+    const searchPattern = `%${query}%`
     const [nameResults, numberResults, themeResults] = await Promise.all([
       supabase.from('sets').select('*').ilike('name', searchPattern).limit(50),
       supabase.from('sets').select('*').ilike('set_number', searchPattern).limit(50),
       supabase.from('sets').select('*').ilike('theme', searchPattern).limit(50),
     ])
 
-    // Combine and deduplicate results
-    const allResults = [
+    const dbResults = [
       ...(nameResults.data || []),
       ...(numberResults.data || []),
       ...(themeResults.data || []),
     ]
+
+    // Merge API results with database results
+    const allResults = new Map<string, any>()
+
+    // Add API results first (preferred - they're fresh)
+    for (const set of apiResults) {
+      allResults.set(set.setNumber, {
+        setNumber: set.setNumber,
+        name: set.name,
+        theme: set.theme,
+        year: set.year,
+        pieceCount: set.pieceCount,
+        msrpCents: set.msrpCents,
+        imageUrl: set.imageUrl,
+        retired: set.retired,
+        bricksetId: set.bricksetId,
+        bricklinkId: set.bricklinkId,
+        gtin: set.gtin,
+      })
+    }
+
+    // Add database results (only if not already in API results)
+    for (const set of dbResults) {
+      if (!allResults.has(set.set_number)) {
+        allResults.set(set.set_number, {
+          setNumber: set.set_number,
+          name: set.name,
+          theme: set.theme,
+          year: set.year,
+          pieceCount: set.piece_count,
+          msrpCents: set.msrp_cents,
+          imageUrl: set.image_url,
+          retired: set.retired,
+          bricksetId: set.brickset_id,
+          bricklinkId: set.bricklink_id,
+          gtin: undefined, // Will be looked up if needed
+        })
+      }
+    }
+
+    // Convert to array and upsert API results to database
+    const resultsArray = Array.from(allResults.values())
     
-    // Remove duplicates by set_number
-    const uniqueResults = Array.from(
-      new Map(allResults.map((set) => [set.set_number, set])).values()
-    ).slice(0, 50)
+    if (apiResults.length > 0) {
+      // Upsert API results into database for future caching
+      const setsToInsert = apiResults.map((set) => ({
+        set_number: set.setNumber,
+        name: set.name,
+        theme: set.theme || null,
+        year: set.year || null,
+        piece_count: set.pieceCount || null,
+        msrp_cents: set.msrpCents || null,
+        image_url: set.imageUrl || null,
+        retired: set.retired || false,
+        brickset_id: set.bricksetId || null,
+        bricklink_id: set.bricklinkId || null,
+      }))
 
-    // If we found results in database, return them
-    if (uniqueResults.length > 0) {
-      return NextResponse.json({ results: uniqueResults })
-    }
-
-    // If no database results, try the catalog provider (BrickEconomy, Brickset, etc.)
-    let results: any[] = []
-    try {
-      const catalogProvider = getCatalogProvider()
-      results = await catalogProvider.searchSets(query)
-    } catch (providerError) {
-      console.error('Catalog provider error:', providerError)
-      // Return error message instead of empty results
-      return NextResponse.json(
-        {
-          error: 'Catalog API not available',
-          message: providerError instanceof Error ? providerError.message : 'No catalog API configured. Please configure BRICKECONOMY_API_KEY or BRICKSET_API_KEY.',
-          results: [],
-        },
-        { status: 503 }
-      )
-    }
-
-    // Upsert sets into database
-    const setsToInsert = results.map((set) => ({
-      set_number: set.setNumber,
-      name: set.name,
-      theme: set.theme || null,
-      year: set.year || null,
-      piece_count: set.pieceCount || null,
-      msrp_cents: set.msrpCents || null,
-      image_url: set.imageUrl || null,
-      retired: set.retired || false,
-      brickset_id: set.bricksetId || null,
-      bricklink_id: set.bricklinkId || null,
-    }))
-
-    // Upsert sets and get back the database records
-    let dbSets: any[] = []
-    if (setsToInsert.length > 0) {
       const { data: upsertedSets, error } = await supabase
         .from('sets')
         .upsert(setsToInsert, {
@@ -84,49 +107,82 @@ export async function GET(request: NextRequest) {
         })
         .select()
 
-      if (error) {
-        console.error('Error upserting sets:', error)
-        // If upsert fails, try to fetch existing sets
-        const setNumbers = setsToInsert.map((s) => s.set_number)
-        const { data: existingSets } = await supabase
-          .from('sets')
-          .select('*')
-          .in('set_number', setNumbers)
-        dbSets = existingSets || []
-      } else {
-        dbSets = upsertedSets || []
-      }
-
-      // Upsert GTINs if available
-      for (const set of results) {
-        if (set.gtin) {
-          const setData = dbSets.find((s) => s.set_number === set.setNumber)
-          if (setData) {
-            await supabase.from('set_identifiers').upsert(
-              {
-                set_id: setData.id,
-                identifier_type: 'GTIN',
-                identifier_value: set.gtin,
-                source: 'BRICKSET',
-              },
-              {
-                onConflict: 'identifier_value',
-                ignoreDuplicates: false,
-              }
-            )
+      if (!error && upsertedSets) {
+        // Upsert GTINs if available
+        for (const set of apiResults) {
+          if (set.gtin) {
+            const setData = upsertedSets.find((s) => s.set_number === set.setNumber)
+            if (setData) {
+              await supabase.from('set_identifiers').upsert(
+                {
+                  set_id: setData.id,
+                  identifier_type: 'GTIN',
+                  identifier_value: set.gtin,
+                  source: 'BRICKSET',
+                },
+                {
+                  onConflict: 'identifier_value',
+                  ignoreDuplicates: false,
+                }
+              )
+            }
           }
         }
+
+        // Map results to include database IDs
+        const finalResults = resultsArray.map((result) => {
+          const dbSet = upsertedSets.find((s) => s.set_number === result.setNumber)
+          return dbSet || {
+            id: `temp-${result.setNumber}`,
+            set_number: result.setNumber,
+            name: result.name,
+            theme: result.theme,
+            year: result.year,
+            piece_count: result.pieceCount,
+            msrp_cents: result.msrpCents,
+            image_url: result.imageUrl,
+            retired: result.retired,
+            brickset_id: result.bricksetId,
+            bricklink_id: result.bricklinkId,
+          }
+        })
+
+        console.log(`[searchSets] Returning ${finalResults.length} results (${apiResults.length} from API)`)
+        return NextResponse.json({ results: finalResults })
       }
     }
 
-    // Return database records (with IDs) instead of mock data
-    return NextResponse.json({ results: dbSets })
+    // If no API results, return database results (if any)
+    if (resultsArray.length > 0) {
+      console.log(`[searchSets] Returning ${resultsArray.length} results from database only`)
+      // Convert to database format
+      const dbFormatted = resultsArray.map((result) => {
+        const dbSet = dbResults.find((s) => s.set_number === result.setNumber)
+        return dbSet || {
+          id: `temp-${result.setNumber}`,
+          set_number: result.setNumber,
+          name: result.name,
+          theme: result.theme,
+          year: result.year,
+          piece_count: result.pieceCount,
+          msrp_cents: result.msrpCents,
+          image_url: result.imageUrl,
+          retired: result.retired,
+          brickset_id: result.bricksetId,
+          bricklink_id: result.bricklinkId,
+        }
+      })
+      return NextResponse.json({ results: dbFormatted })
+    }
+
+    // No results at all
+    console.log(`[searchSets] No results found`)
+    return NextResponse.json({ results: [] })
   } catch (error) {
-    console.error('Error searching sets:', error)
+    console.error('[searchSets] Error searching sets:', error)
     return NextResponse.json(
       { error: 'Failed to search sets', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
-
