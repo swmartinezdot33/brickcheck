@@ -154,18 +154,13 @@ export function BarcodeScanner({
       const codeReader = new BrowserMultiFormatReader()
       codeReaderRef.current = codeReader
 
-      // Configure hints - PRIORITIZE QR/Data Matrix FIRST (order matters!)
+      // Configure hints - ONLY QR codes and Data Matrix (LEGO uses these)
+      // Ignore all linear barcodes (UPC, EAN, etc.)
       const hints = new Map()
-      // Put QR_CODE and DATA_MATRIX FIRST to prioritize them
+      // ONLY QR_CODE and DATA_MATRIX - LEGO uses these for digital instructions, minifigures, etc.
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.QR_CODE,        // FIRST - highest priority
-        BarcodeFormat.DATA_MATRIX,    // SECOND - high priority
-        BarcodeFormat.EAN_13,
-        BarcodeFormat.EAN_8,
-        BarcodeFormat.UPC_A,
-        BarcodeFormat.UPC_E,
-        BarcodeFormat.CODE_128,
-        BarcodeFormat.CODE_39,
+        BarcodeFormat.QR_CODE,        // LEGO uses QR codes for instructions, minifigures, set registration
+        BarcodeFormat.DATA_MATRIX,    // LEGO also uses Data Matrix codes
       ])
       hints.set(DecodeHintType.TRY_HARDER, true)
       hints.set(DecodeHintType.ASSUME_GS1, false) // Don't assume GS1 format
@@ -176,7 +171,7 @@ export function BarcodeScanner({
       codeReader.hints = hints
       
       // Log configured formats for debugging
-      console.log('[Scanner] Configured formats:', hints.get(DecodeHintType.POSSIBLE_FORMATS))
+      console.log('[Scanner] Configured formats (QR/Data Matrix only):', hints.get(DecodeHintType.POSSIBLE_FORMATS))
 
       // Get available video input devices
       const videoInputDevices = await codeReader.listVideoInputDevices()
@@ -297,13 +292,17 @@ export function BarcodeScanner({
         (result, err) => {
           if (result) {
             const format = result.getBarcodeFormat()
+            
+            // ONLY process QR codes and Data Matrix - ignore everything else
+            if (format !== BarcodeFormat.QR_CODE && format !== BarcodeFormat.DATA_MATRIX) {
+              // Silently ignore non-QR/Data Matrix codes
+              return
+            }
+            
             const code = result.getText().trim()
             
-            // For QR codes and Data Matrix, preserve the full text (may contain URLs)
-            // For barcodes, remove spaces
-            const cleanCode = (format === BarcodeFormat.QR_CODE || format === BarcodeFormat.DATA_MATRIX)
-              ? code // Keep full text for QR/Data Matrix (may be URLs)
-              : code.replace(/\s+/g, '') // Remove spaces for barcodes
+            // Preserve the full text for QR/Data Matrix (may contain URLs)
+            const cleanCode = code
 
             if (cleanCode && cleanCode.length > 0) {
               // Get result points (corners of the barcode)
@@ -340,10 +339,8 @@ export function BarcodeScanner({
                   // Create unique ID for this code
                   const codeId = `${cleanCode}_${format}`
 
-                  // Log detection for debugging (especially QR codes)
-                  if (format === BarcodeFormat.QR_CODE || format === BarcodeFormat.DATA_MATRIX) {
-                    console.log(`[Scanner] Detected ${format === BarcodeFormat.QR_CODE ? 'QR_CODE' : 'DATA_MATRIX'}:`, cleanCode.substring(0, 50))
-                  }
+                  // Log detection for debugging
+                  console.log(`[Scanner] ✅ Detected ${format === BarcodeFormat.QR_CODE ? 'QR_CODE' : 'DATA_MATRIX'}:`, cleanCode.substring(0, 100))
 
                   // Update detected codes
                   setDetectedCodes((prev) => {
@@ -462,9 +459,9 @@ export function BarcodeScanner({
       {!isFullScreen && (
         <CardHeader>
           <CardTitle>Barcode Scanner</CardTitle>
-          <CardDescription>
-            Point your camera at barcodes. Tap a detected code to select it.
-          </CardDescription>
+        <CardDescription>
+          Point your camera at QR codes on LEGO boxes. Tap a detected code to select it.
+        </CardDescription>
         </CardHeader>
       )}
       <CardContent className={`space-y-4 ${isFullScreen ? 'flex-1 flex flex-col p-0' : ''}`}>
@@ -566,9 +563,9 @@ export function BarcodeScanner({
               )}
             </div>
 
-            <p className="text-xs text-muted-foreground text-center">
-              Make sure to allow camera access when prompted. Multiple codes will appear as overlays - tap the one you want to scan.
-            </p>
+        <p className="text-xs text-muted-foreground text-center">
+          Make sure to allow camera access when prompted. Only QR codes and Data Matrix codes are detected (linear barcodes are ignored).
+        </p>
 
             {isScanning && codesArray.length > 0 && (
               <div className="text-xs text-muted-foreground text-center">

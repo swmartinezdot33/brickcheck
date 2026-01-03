@@ -4,11 +4,26 @@ import { getCatalogProvider } from '@/lib/providers'
 
 // Helper to extract potential set number from a URL or string
 function extractSetNumber(input: string): string | null {
-  // Check for common LEGO URLs
+  // Check for common LEGO URLs from QR codes
   // https://www.lego.com/bi/review?set=75192
+  // https://www.lego.com/en-us/product/75192
   // https://conf.lego.com/en-us/instructions/75333
-  // Or just look for a 4-7 digit number surrounded by non-digits
+  // https://www.lego.com/r/www/r/insiders/-/insiders-claim?setNumber=75192
+  // lego.com URLs with set numbers
   
+  // Try to extract from URL parameters first
+  const urlParamMatch = input.match(/[?&](?:set|setNumber|set_number)=([0-9]{4,7})/i)
+  if (urlParamMatch && urlParamMatch[1]) {
+    return urlParamMatch[1]
+  }
+  
+  // Try to extract from URL path (e.g., /product/75192, /instructions/75333)
+  const pathMatch = input.match(/\/(?:product|instructions|set)\/([0-9]{4,7})/i)
+  if (pathMatch && pathMatch[1]) {
+    return pathMatch[1]
+  }
+  
+  // Fallback: look for 4-7 digit number surrounded by non-digits
   const matches = input.match(/\b([0-9]{4,7})\b/)
   if (matches && matches[1]) {
     return matches[1]
@@ -35,23 +50,31 @@ export async function GET(request: NextRequest) {
     // 1. Check if it's a URL or contains a Set Number
     const extractedSetNumber = extractSetNumber(cleanCode)
     
-    // If it looks like a URL or we extracted a valid set number that IS NOT a standard GTIN (GTINs are usually 8, 12, 13 digits)
-    const isUrl = cleanCode.toLowerCase().startsWith('http') || cleanCode.toLowerCase().startsWith('www')
+    // If it looks like a URL (QR codes from LEGO boxes contain URLs)
+    const isUrl = cleanCode.toLowerCase().startsWith('http') || cleanCode.toLowerCase().startsWith('www') || cleanCode.includes('lego.com')
     const isShortNumber = /^\d{4,7}$/.test(lookupValue)
     
-    // Priority: 
-    // 1. If URL, use extracted number -> Set Number Lookup
-    // 2. If Short Number (4-7 digits), try Set Number Lookup first (unlikely to be a full GTIN)
-    // 3. Otherwise, try GTIN Lookup first
+    // Priority for QR codes (which contain URLs):
+    // 1. If URL (from QR code), extract set number and use Set Number Lookup
+    // 2. If Short Number (4-7 digits), try Set Number Lookup first
+    // 3. Otherwise, try GTIN Lookup (but QR codes shouldn't reach here)
     
-    if (isUrl && extractedSetNumber) {
-        console.log(`[scanLookup] Detected URL with set number: ${extractedSetNumber}`)
-        lookupMethod = 'SET_NUMBER'
-        lookupValue = extractedSetNumber
+    if (isUrl) {
+        if (extractedSetNumber) {
+            console.log(`[scanLookup] Detected LEGO QR code URL with set number: ${extractedSetNumber} from ${cleanCode.substring(0, 50)}...`)
+            lookupMethod = 'SET_NUMBER'
+            lookupValue = extractedSetNumber
+        } else {
+            // URL but no set number found - might be a different type of LEGO QR code
+            console.log(`[scanLookup] Detected URL but no set number found: ${cleanCode.substring(0, 50)}...`)
+            // Still try to lookup by the URL itself or return error
+            return NextResponse.json({ error: 'QR code URL does not contain a recognizable set number' }, { status: 404 })
+        }
     } else if (isShortNumber) {
         console.log(`[scanLookup] Detected short number (likely Set Number): ${lookupValue}`)
         lookupMethod = 'SET_NUMBER'
     } else {
+        // This shouldn't happen for QR codes, but handle it
         console.log(`[scanLookup] Treating as GTIN/Barcode: ${lookupValue}`)
         lookupMethod = 'GTIN'
     }

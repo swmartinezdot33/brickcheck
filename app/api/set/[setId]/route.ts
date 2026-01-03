@@ -110,25 +110,49 @@ export async function GET(
       console.error('Error fetching snapshots:', snapshotsError)
     }
 
-    // OPTIONAL: If no price data exists, try to fetch it now (on-demand)
+    // OPTIONAL: If no price data exists OR data is older than 7 days, try to fetch it now (on-demand)
     // This improves the user experience for new sets
     let updatedSnapshots = snapshots || []
-    if (updatedSnapshots.length === 0) {
+    const shouldRefresh = updatedSnapshots.length === 0 || (() => {
+      // Check if latest snapshot is older than 7 days
+      if (updatedSnapshots.length > 0) {
+        const latest = new Date(updatedSnapshots[0].timestamp)
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        return latest < sevenDaysAgo
+      }
+      return true
+    })()
+
+    if (shouldRefresh) {
         try {
-            console.log(`[set/id] No price data for ${set.set_number}, fetching...`)
+            console.log(`[set/id] ${updatedSnapshots.length === 0 ? 'No price data' : 'Stale price data'} for ${set.set_number}, fetching...`)
             const priceProvider = getPriceProvider()
-            // Run refresh in background (don't await) or await if we want to show it immediately
-            // Awaiting for better UX on first load
+            // Fetch fresh prices
             const prices = await priceProvider.refreshPrices(set.set_number)
             
             if (prices.length > 0) {
+                // Determine source
+                const sources: string[] = []
+                if (process.env.BRICKECONOMY_API_KEY) sources.push('BRICKECONOMY')
+                if (
+                  process.env.BRICKLINK_CONSUMER_KEY &&
+                  process.env.BRICKLINK_CONSUMER_SECRET &&
+                  process.env.BRICKLINK_TOKEN &&
+                  process.env.BRICKLINK_TOKEN_SECRET
+                ) {
+                  sources.push('BRICKLINK')
+                }
+                const source = sources.join('+') || 'UNKNOWN'
+
                 const { data: newSnapshots } = await supabase
                     .from('price_snapshots')
                     .insert(prices.map(p => ({
                         set_id: realSetId,
                         condition: p.condition,
-                        source: p.metadata?.source || 'BRICKLINK', // Default or from metadata
+                        source: source,
                         price_cents: p.priceCents,
+                        currency: p.currency || 'USD',
                         timestamp: p.timestamp,
                         sample_size: p.sampleSize,
                         variance: p.variance,
@@ -136,12 +160,17 @@ export async function GET(
                     })))
                     .select()
                 
-                if (newSnapshots) {
-                    updatedSnapshots = newSnapshots
+                if (newSnapshots && newSnapshots.length > 0) {
+                    // Merge with existing snapshots
+                    updatedSnapshots = [...newSnapshots, ...updatedSnapshots]
+                    console.log(`[set/id] ✅ Fetched ${newSnapshots.length} new price snapshots for ${set.set_number}`)
                 }
+            } else {
+                console.warn(`[set/id] ⚠️  No price data returned from provider for ${set.set_number}`)
             }
         } catch (e) {
             console.error('[set/id] Price refresh failed:', e)
+            // Don't fail the entire request if price fetch fails - just log it
         }
     }
 
