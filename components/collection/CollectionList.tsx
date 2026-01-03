@@ -10,9 +10,10 @@ import { formatCurrency } from '@/lib/utils'
 
 interface CollectionListProps {
   onEdit?: (item: CollectionItemWithSet) => void
+  retiredFilter?: 'all' | 'retired' | 'active'
 }
 
-export function CollectionList({ onEdit }: CollectionListProps) {
+export function CollectionList({ onEdit, retiredFilter = 'all' }: CollectionListProps) {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -65,17 +66,49 @@ export function CollectionList({ onEdit }: CollectionListProps) {
     )
   }
 
+  // Filter by retired status
+  const filteredData = data.filter((item) => {
+    if (retiredFilter === 'retired') {
+      return item.sets?.retired === true
+    }
+    if (retiredFilter === 'active') {
+      return item.sets?.retired !== true
+    }
+    return true // 'all'
+  })
+
+  if (filteredData.length === 0 && data.length > 0) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">
+            No {retiredFilter === 'retired' ? 'retired' : 'active'} sets found
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Try changing the filter to see other sets
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-4">
-      {data.map((item) => (
+      {filteredData.map((item) => (
         <Card key={item.id}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <h3 className="font-semibold text-lg">
                     {item.sets?.name || 'Unknown Set'}
                   </h3>
+                  {item.sets?.retired && (
+                    <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
+                      ⭐ Retired
+                    </Badge>
+                  )}
                   <Badge variant={item.condition === 'SEALED' ? 'default' : 'secondary'}>
                     {item.condition}
                   </Badge>

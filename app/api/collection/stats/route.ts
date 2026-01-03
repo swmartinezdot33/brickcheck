@@ -24,7 +24,8 @@ export async function GET() {
         sets (
           id,
           set_number,
-          name
+          name,
+          retired
         )
       `
       )
@@ -34,10 +35,14 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Calculate stats (placeholder - will be enhanced with real pricing in Milestone F)
+    // Calculate stats
     const totalSets = items?.reduce((sum, item) => sum + item.quantity, 0) || 0
     const sealedCount = items?.filter((item) => item.condition === 'SEALED').length || 0
     const usedCount = items?.filter((item) => item.condition === 'USED').length || 0
+    const retiredCount = items?.filter((item) => {
+      const sets = item.sets as any
+      return sets?.retired === true
+    }).length || 0
     const totalCostBasis =
       items?.reduce((sum, item) => {
         if (item.acquisition_cost_cents) {
@@ -50,6 +55,7 @@ export async function GET() {
       totalSets,
       sealedCount,
       usedCount,
+      retiredCount,
       totalCostBasis,
       totalEstimatedValue: 0, // Will be calculated in Milestone F
       todayChange: 0,

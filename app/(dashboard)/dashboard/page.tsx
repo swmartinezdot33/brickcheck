@@ -101,6 +101,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">{stats?.totalSets || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats?.sealedCount || 0} sealed, {stats?.usedCount || 0} used
+              {stats?.retiredCount ? ` • ${stats.retiredCount} retired` : ''}
             </p>
           </CardContent>
         </Card>
