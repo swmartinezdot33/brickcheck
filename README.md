@@ -56,6 +56,7 @@ A production-ready MVP for tracking LEGO collection market values over time, sim
 
    # App
    NEXT_PUBLIC_APP_URL=http://localhost:3000
+   # Production: https://www.brickcheck.app
    VERCEL_CRON_SECRET=your_random_secret_for_cron_auth
 
    # Optional

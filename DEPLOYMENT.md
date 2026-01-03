@@ -41,7 +41,7 @@ The code has been pushed to GitHub and is ready for deployment.
    BRICKLINK_TOKEN_SECRET=
 
    # App
-   NEXT_PUBLIC_APP_URL=https://your-project.vercel.app
+   NEXT_PUBLIC_APP_URL=https://www.brickcheck.app
    VERCEL_CRON_SECRET=generate_a_random_secret_here
 
    # Optional
@@ -113,7 +113,7 @@ npx vercel
 | `BRICKLINK_CONSUMER_SECRET` | ⚠️ Optional | BrickLink OAuth consumer secret |
 | `BRICKLINK_TOKEN` | ⚠️ Optional | BrickLink OAuth token |
 | `BRICKLINK_TOKEN_SECRET` | ⚠️ Optional | BrickLink OAuth token secret |
-| `NEXT_PUBLIC_APP_URL` | ✅ Yes | Your Vercel deployment URL |
+| `NEXT_PUBLIC_APP_URL` | ✅ Yes | Production URL: https://www.brickcheck.app |
 | `VERCEL_CRON_SECRET` | ✅ Yes | Secret for securing cron endpoints |
 | `SENTRY_DSN` | ⚠️ Optional | Sentry DSN for error tracking |
 

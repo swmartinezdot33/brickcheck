@@ -76,7 +76,7 @@ Or from the Supabase Dashboard:
 1. Go to https://vercel.com/ultimateagent/brickcheck/settings/environment-variables
 2. Add all the environment variables from Step 5
 3. Also add:
-   - `NEXT_PUBLIC_APP_URL=https://brickcheck-six.vercel.app`
+   - `NEXT_PUBLIC_APP_URL=https://www.brickcheck.app`
    - `VERCEL_CRON_SECRET=<generate with: openssl rand -hex 32>`
 4. Redeploy the application
 

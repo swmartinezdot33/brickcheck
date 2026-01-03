@@ -43,7 +43,7 @@ npx vercel env add SUPABASE_SERVICE_ROLE_KEY development <<< "$SERVICE_KEY"
 
 echo ""
 echo "Adding NEXT_PUBLIC_APP_URL..."
-APP_URL="https://brickcheck-six.vercel.app"
+APP_URL="https://www.brickcheck.app"
 npx vercel env add NEXT_PUBLIC_APP_URL production <<< "$APP_URL"
 npx vercel env add NEXT_PUBLIC_APP_URL preview <<< "$APP_URL"
 npx vercel env add NEXT_PUBLIC_APP_URL development <<< "http://localhost:3000"

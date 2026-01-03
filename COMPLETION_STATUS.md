@@ -42,7 +42,7 @@
 
 ### Infrastructure & Deployment
 - ✅ GitHub repository: https://github.com/swmartinezdot33/brickcheck
-- ✅ Vercel deployment: https://brickcheck-six.vercel.app
+- ✅ Vercel deployment: https://www.brickcheck.app
 - ✅ Supabase project created: `lajiakzlublsamwpmzyd`
 - ✅ Database migrations applied
 - ✅ Environment variables configured in Vercel
@@ -98,7 +98,7 @@ To enable real data, simply add API keys for Brickset and BrickLink when availab
 
 ## 📊 Deployment URLs
 
-- **Production**: https://brickcheck-six.vercel.app
+- **Production**: https://www.brickcheck.app
 - **GitHub**: https://github.com/swmartinezdot33/brickcheck
 - **Supabase Dashboard**: https://supabase.com/dashboard/project/lajiakzlublsamwpmzyd
 - **Vercel Dashboard**: https://vercel.com/ultimateagent/brickcheck
