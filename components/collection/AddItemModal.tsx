@@ -25,9 +25,10 @@ interface AddItemModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   set?: Set
+  onSuccess?: () => void
 }
 
-export function AddItemModal({ open, onOpenChange, set }: AddItemModalProps) {
+export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModalProps) {
   const queryClient = useQueryClient()
   const [condition, setCondition] = useState<'SEALED' | 'USED'>('SEALED')
   const [conditionGrade, setConditionGrade] = useState<string>('')
@@ -61,6 +62,10 @@ export function AddItemModal({ open, onOpenChange, set }: AddItemModalProps) {
       setNotes('')
       // Close modal
       onOpenChange(false)
+      // Call optional success callback
+      if (onSuccess) {
+        onSuccess()
+      }
     },
   })
 

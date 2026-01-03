@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Package, Scan, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, Scan, Settings, LogOut, Search } from 'lucide-react'
 
 export function Navbar() {
   const router = useRouter()
@@ -31,6 +31,13 @@ export function Navbar() {
               >
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
+              </Link>
+              <Link
+                href="/browse"
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Search className="h-4 w-4" />
+                Browse
               </Link>
               <Link
                 href="/collection"
