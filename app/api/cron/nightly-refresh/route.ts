@@ -3,8 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { calculatePriceEstimate, calculateTrend } from '@/lib/pricing/engine'
 import { getPriceProvider } from '@/lib/providers'
 
-const priceProvider = getPriceProvider()
-
 export async function POST(request: NextRequest) {
   try {
     // Verify request is from Vercel Cron
@@ -50,6 +48,15 @@ export async function POST(request: NextRequest) {
         if (!set) continue
 
         // Fetch prices from provider
+        let priceProvider
+        try {
+          priceProvider = getPriceProvider()
+        } catch (error) {
+          console.error(`Price API not configured for set ${setId}:`, error)
+          errors++
+          continue
+        }
+
         const sealedPrices = await priceProvider.getPrices(set.set_number, 'SEALED')
         const usedPrices = await priceProvider.getPrices(set.set_number, 'USED')
 

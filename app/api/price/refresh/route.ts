@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getPriceProvider } from '@/lib/providers'
 
-const priceProvider = getPriceProvider()
-
 export async function POST(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -34,16 +32,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Set not found' }, { status: 404 })
     }
 
-    // Fetch prices from provider (mock for now, will be BrickLink in Milestone E)
+    // Fetch prices from provider (BrickEconomy or BrickLink)
+    let priceProvider
+    try {
+      priceProvider = getPriceProvider()
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: 'Price API not configured',
+          message: error instanceof Error ? error.message : 'No price API configured. Please configure BRICKECONOMY_API_KEY or BrickLink credentials.',
+        },
+        { status: 503 }
+      )
+    }
+
     const sealedPrices = await priceProvider.getPrices(set.set_number, 'SEALED')
     const usedPrices = await priceProvider.getPrices(set.set_number, 'USED')
+
+    // Determine source from environment
+    const source = process.env.BRICKECONOMY_API_KEY ? 'BRICKECONOMY' : 'BRICKLINK'
 
     // Store latest price snapshots
     const snapshotsToInsert = [
       ...sealedPrices.slice(-1).map((p) => ({
         set_id: setId,
         condition: 'SEALED' as const,
-        source: 'BRICKLINK',
+        source,
         price_cents: p.priceCents,
         currency: p.currency,
         timestamp: p.timestamp,
@@ -54,7 +68,7 @@ export async function POST(request: NextRequest) {
       ...usedPrices.slice(-1).map((p) => ({
         set_id: setId,
         condition: 'USED' as const,
-        source: 'BRICKLINK',
+        source,
         price_cents: p.priceCents,
         currency: p.currency,
         timestamp: p.timestamp,

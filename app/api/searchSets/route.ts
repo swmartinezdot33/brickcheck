@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCatalogProvider } from '@/lib/providers'
 
-const catalogProvider = getCatalogProvider()
-
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const query = searchParams.get('q')
@@ -43,14 +41,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ results: uniqueResults })
     }
 
-    // If no database results, try the catalog provider (Brickset or Mock)
+    // If no database results, try the catalog provider (BrickEconomy, Brickset, etc.)
     let results: any[] = []
     try {
+      const catalogProvider = getCatalogProvider()
       results = await catalogProvider.searchSets(query)
     } catch (providerError) {
       console.error('Catalog provider error:', providerError)
-      // If provider fails, return empty results
-      return NextResponse.json({ results: [] })
+      // Return error message instead of empty results
+      return NextResponse.json(
+        {
+          error: 'Catalog API not available',
+          message: providerError instanceof Error ? providerError.message : 'No catalog API configured. Please configure BRICKECONOMY_API_KEY or BRICKSET_API_KEY.',
+          results: [],
+        },
+        { status: 503 }
+      )
     }
 
     // Upsert sets into database
