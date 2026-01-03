@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
+import { BrowserQRCodeReader, BrowserCodeReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +34,7 @@ export function BarcodeScanner({
   const containerRef = useRef<HTMLDivElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
   const [detectedCodes, setDetectedCodes] = useState<Map<string, DetectedCode>>(new Map())
   const pruningIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -98,30 +98,14 @@ export function BarcodeScanner({
   // The video element uses object-cover which maintains aspect ratio, so normalized
   // coordinates should map correctly to the display
 
-  // Lookup set information for a detected code
+  // Lookup set information for a detected QR code
   const lookupSetInfo = async (code: string, format: BarcodeFormat): Promise<DetectedCode['setInfo'] | null> => {
     try {
-      // Only lookup for QR codes, Data Matrix, or if it looks like a set number
-      const isQR = format === BarcodeFormat.QR_CODE || format === BarcodeFormat.DATA_MATRIX
+      // BrowserQRCodeReader only returns QR codes
+      // QR codes from LEGO typically contain URLs with set numbers
       const isSetNumber = /^\d{4,7}$/.test(code) || code.includes('lego.com') || code.includes('set=')
       
-      if (!isQR && !isSetNumber) {
-        // For barcodes, try GTIN lookup
-        const res = await fetch(`/api/scanLookup?gtin=${encodeURIComponent(code)}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.set) {
-            return {
-              name: data.set.name,
-              imageUrl: data.set.image_url,
-              setNumber: data.set.set_number,
-            }
-          }
-        }
-        return null
-      }
-
-      // For QR codes or set numbers, try scanLookup
+      // For QR codes (which should be URLs or set numbers), try scanLookup
       const res = await fetch(`/api/scanLookup?code=${encodeURIComponent(code)}`)
       if (res.ok) {
         const data = await res.json()
@@ -151,27 +135,12 @@ export function BarcodeScanner({
         throw new Error('Camera access requires HTTPS. Please use the production URL.')
       }
 
-      const codeReader = new BrowserMultiFormatReader()
+      // Use BrowserQRCodeReader for better QR code detection
+      // This is more reliable than BrowserMultiFormatReader with restricted formats
+      const codeReader = new BrowserQRCodeReader()
       codeReaderRef.current = codeReader
-
-      // Configure hints - ONLY QR codes and Data Matrix (LEGO uses these)
-      // Ignore all linear barcodes (UPC, EAN, etc.)
-      const hints = new Map()
-      // ONLY QR_CODE and DATA_MATRIX - LEGO uses these for digital instructions, minifigures, etc.
-      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.QR_CODE,        // LEGO uses QR codes for instructions, minifigures, set registration
-        BarcodeFormat.DATA_MATRIX,    // LEGO also uses Data Matrix codes
-      ])
-      hints.set(DecodeHintType.TRY_HARDER, true)
-      hints.set(DecodeHintType.ASSUME_GS1, false) // Don't assume GS1 format
-      // Additional hints for better QR code detection
-      hints.set(DecodeHintType.CHARACTER_SET, 'UTF-8')
-      // More aggressive QR code detection
-      hints.set(DecodeHintType.PURE_BARCODE, false) // Allow QR codes with surrounding text/noise
-      codeReader.hints = hints
       
-      // Log configured formats for debugging
-      console.log('[Scanner] Configured formats (QR/Data Matrix only):', hints.get(DecodeHintType.POSSIBLE_FORMATS))
+      console.log('[Scanner] ✅ Using QR code reader (QR codes only)')
 
       // Get available video input devices
       const videoInputDevices = await codeReader.listVideoInputDevices()
@@ -292,16 +261,18 @@ export function BarcodeScanner({
         (result, err) => {
           if (result) {
             const format = result.getBarcodeFormat()
+            const code = result.getText().trim()
             
-            // ONLY process QR codes and Data Matrix - ignore everything else
-            if (format !== BarcodeFormat.QR_CODE && format !== BarcodeFormat.DATA_MATRIX) {
-              // Silently ignore non-QR/Data Matrix codes
+            // BrowserQRCodeReader only returns QR codes, but verify anyway
+            if (format !== BarcodeFormat.QR_CODE) {
+              console.warn(`[Scanner] ⚠️  Unexpected format from QR reader: ${format}`)
               return
             }
             
-            const code = result.getText().trim()
+            // Log QR code detection
+            console.log(`[Scanner] ✅ QR Code detected: ${code.substring(0, 100)}`)
             
-            // Preserve the full text for QR/Data Matrix (may contain URLs)
+            // Preserve the full text (may contain URLs)
             const cleanCode = code
 
             if (cleanCode && cleanCode.length > 0) {
@@ -339,8 +310,8 @@ export function BarcodeScanner({
                   // Create unique ID for this code
                   const codeId = `${cleanCode}_${format}`
 
-                  // Log detection for debugging
-                  console.log(`[Scanner] ✅ Detected ${format === BarcodeFormat.QR_CODE ? 'QR_CODE' : 'DATA_MATRIX'}:`, cleanCode.substring(0, 100))
+                  // Log successful QR/Data Matrix detection
+                  console.log(`[Scanner] ✅ Processing ${format === BarcodeFormat.QR_CODE ? 'QR_CODE' : 'DATA_MATRIX'}:`, cleanCode.substring(0, 100))
 
                   // Update detected codes
                   setDetectedCodes((prev) => {
@@ -383,21 +354,15 @@ export function BarcodeScanner({
             }
           }
           if (err) {
-            // Log QR code detection attempts for debugging
+            // Log errors for debugging (but not too frequently)
             if (err.name === 'NotFoundException' || err.name === 'NoBarcodeDetectedException') {
               // This is normal - log occasionally to see detection attempts
-              if (Math.random() < 0.05) {
-                console.debug('[Scanner] Scanning for codes...')
+              if (Math.random() < 0.01) {
+                console.debug('[Scanner] 🔍 Scanning for QR codes...')
               }
-            } else if (
-              err.name !== 'NotFoundException' &&
-              err.name !== 'NoBarcodeDetectedException' &&
-              !err.message?.includes('No barcode detected')
-            ) {
-              // Log other errors more frequently for debugging
-              if (Math.random() < 0.1) {
-                console.debug('[Scanner] Error:', err.name, err.message)
-              }
+            } else {
+              // Log other errors for debugging
+              console.warn('[Scanner] ⚠️  Detection error:', err.name, err.message?.substring(0, 100))
             }
           }
         }

@@ -118,9 +118,7 @@ export class CompositePriceProvider implements PriceProvider {
 
   constructor() {
     // Add all available providers
-    if (process.env.BRICKECONOMY_API_KEY) {
-      this.providers.push(new BrickEconomyProvider(process.env.BRICKECONOMY_API_KEY))
-    }
+    // Prioritize BrickLink (more reliable) over BrickEconomy
     if (
       process.env.BRICKLINK_CONSUMER_KEY &&
       process.env.BRICKLINK_CONSUMER_SECRET &&
@@ -128,6 +126,9 @@ export class CompositePriceProvider implements PriceProvider {
       process.env.BRICKLINK_TOKEN_SECRET
     ) {
       this.providers.push(new BrickLinkProvider())
+    }
+    if (process.env.BRICKECONOMY_API_KEY) {
+      this.providers.push(new BrickEconomyProvider(process.env.BRICKECONOMY_API_KEY))
     }
 
     if (this.providers.length === 0) {
@@ -195,26 +196,40 @@ export class CompositePriceProvider implements PriceProvider {
 
   async refreshPrices(setNumber: string): Promise<PriceData[]> {
     const allPrices: PriceData[] = []
+    const errors: string[] = []
 
     // Try all providers and get latest prices
     for (const provider of this.providers) {
       try {
         const providerName = provider.constructor.name.replace('Provider', '').toUpperCase()
+        console.log(`[CompositePriceProvider] Trying ${providerName} for ${setNumber}...`)
         const prices = await provider.refreshPrices(setNumber)
-        // Add provider source to metadata
-        const enrichedPrices = prices.map((price) => ({
-          ...price,
-          metadata: {
-            ...price.metadata,
-            provider: providerName,
-            source: providerName,
-          },
-        }))
-        allPrices.push(...enrichedPrices)
+        
+        if (prices.length > 0) {
+          // Add provider source to metadata
+          const enrichedPrices = prices.map((price) => ({
+            ...price,
+            metadata: {
+              ...price.metadata,
+              provider: providerName,
+              source: providerName,
+            },
+          }))
+          allPrices.push(...enrichedPrices)
+          console.log(`[CompositePriceProvider] ✅ ${providerName} returned ${prices.length} prices`)
+        } else {
+          console.log(`[CompositePriceProvider] ⏭️  ${providerName} returned no prices`)
+        }
       } catch (error) {
-        console.warn(`Provider ${provider.constructor.name} failed for refresh:`, error)
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        console.warn(`[CompositePriceProvider] ⚠️  ${provider.constructor.name} failed:`, errorMsg)
+        errors.push(`${provider.constructor.name}: ${errorMsg.substring(0, 100)}`)
         // Continue with other providers
       }
+    }
+
+    if (allPrices.length === 0 && errors.length > 0) {
+      console.warn(`[CompositePriceProvider] ❌ All providers failed for ${setNumber}:`, errors)
     }
 
     // Deduplicate by condition and return latest (prefer larger sample sizes)
