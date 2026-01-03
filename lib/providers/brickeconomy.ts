@@ -21,8 +21,12 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
 
     const url = new URL(`${this.baseUrl}${endpoint}`)
     Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.set(key, value)
+      if (value) {
+        url.searchParams.set(key, value)
+      }
     })
+
+    console.log(`[BrickEconomyProvider] Making request to: ${url.toString()}`)
 
     try {
       const response = await fetch(url.toString(), {
@@ -33,16 +37,25 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
         },
       })
 
+      const responseText = await response.text()
+      console.log(`[BrickEconomyProvider] Response status: ${response.status}`)
+      console.log(`[BrickEconomyProvider] Response preview: ${responseText.substring(0, 500)}`)
+
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('BrickEconomy API error:', response.status, errorText)
-        throw new Error(`BrickEconomy API error: ${response.status} ${response.statusText}`)
+        console.error('[BrickEconomyProvider] API error:', response.status, responseText)
+        throw new Error(`BrickEconomy API error: ${response.status} ${response.statusText} - ${responseText.substring(0, 200)}`)
       }
 
-      const data = await response.json()
-      return data
+      try {
+        const data = JSON.parse(responseText)
+        return data
+      } catch (parseError) {
+        console.error('[BrickEconomyProvider] Failed to parse JSON:', parseError)
+        console.error('[BrickEconomyProvider] Response was:', responseText)
+        throw new Error(`BrickEconomy API returned invalid JSON: ${responseText.substring(0, 200)}`)
+      }
     } catch (error) {
-      console.error('BrickEconomy API request failed:', error)
+      console.error('[BrickEconomyProvider] Request failed:', error)
       throw error
     }
   }
@@ -60,12 +73,29 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
       )
       
       console.log(`[BrickEconomyProvider] Raw API response keys:`, Object.keys(data || {}))
+      console.log(`[BrickEconomyProvider] Full response:`, JSON.stringify(data).substring(0, 1000))
 
-      if (!data.sets || !Array.isArray(data.sets)) {
+      // BrickEconomy API might return data in different formats
+      // Try multiple possible response structures
+      let sets: any[] = []
+      if (data.sets && Array.isArray(data.sets)) {
+        sets = data.sets
+      } else if (data.data && Array.isArray(data.data)) {
+        sets = data.data
+      } else if (Array.isArray(data)) {
+        sets = data
+      } else if (data.results && Array.isArray(data.results)) {
+        sets = data.results
+      }
+
+      if (sets.length === 0) {
+        console.log(`[BrickEconomyProvider] No sets found in response. Response structure:`, Object.keys(data || {}))
         return []
       }
 
-      return data.sets.map((set: any) => ({
+      console.log(`[BrickEconomyProvider] Found ${sets.length} sets`)
+
+      return sets.map((set: any) => ({
         setNumber: set.set_number || set.number || '',
         name: set.name || '',
         theme: set.theme || undefined,

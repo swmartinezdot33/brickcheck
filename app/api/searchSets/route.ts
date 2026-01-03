@@ -25,7 +25,17 @@ export async function GET(request: NextRequest) {
       console.log(`[searchSets] API returned ${apiResults.length} results`)
     } catch (providerError) {
       console.error('[searchSets] Catalog provider error:', providerError)
+      console.error('[searchSets] Error stack:', providerError instanceof Error ? providerError.stack : 'No stack trace')
       // If API fails, we'll fall back to database results below
+      // But also return error info to help debug
+      if (resultsArray.length === 0) {
+        return NextResponse.json({
+          results: [],
+          error: 'API search failed',
+          message: providerError instanceof Error ? providerError.message : 'Unknown error',
+          debug: process.env.NODE_ENV === 'development' ? String(providerError) : undefined,
+        })
+      }
     }
 
     // Also check database for any additional results

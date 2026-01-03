@@ -60,7 +60,8 @@ export class CompositeCatalogProvider implements CatalogProvider {
           }
         }
       } catch (error) {
-        console.warn(`Provider ${provider.constructor.name} failed for search:`, error)
+        console.error(`[CompositeCatalogProvider] Provider ${provider.constructor.name} failed for search:`, error)
+        console.error(`[CompositeCatalogProvider] Error details:`, error instanceof Error ? error.message : String(error))
         // Continue with other providers
       }
     }
