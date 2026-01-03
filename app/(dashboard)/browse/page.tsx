@@ -6,69 +6,81 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Loader2, Package, ExternalLink } from 'lucide-react'
+import { Search, Loader2, Package, ExternalLink, Plus } from 'lucide-react'
 import { Set } from '@/types'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
+import { AddItemModal } from '@/components/collection/AddItemModal'
 
 export default function BrowsePage() {
   const [query, setQuery] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedSet, setSelectedSet] = useState<Set | null>(null)
+  const [addModalOpen, setAddModalOpen] = useState(false)
 
+  // Real-time search as user types (debounced by React Query)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['browse-sets', searchTerm],
+    queryKey: ['browse-sets', query],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return []
-      const res = await fetch(`/api/searchSets?q=${encodeURIComponent(searchTerm)}`)
-      if (!res.ok) throw new Error('Failed to search')
+      if (!query || query.length < 2) return []
+      const res = await fetch(`/api/searchSets?q=${encodeURIComponent(query)}`)
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to search')
+      }
       const data = await res.json()
       return data.results as Set[]
     },
-    enabled: searchTerm.length >= 2,
+    enabled: query.length >= 2,
     staleTime: 30000,
   })
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSearchTerm(query)
+  const handleAddToCollection = (set: Set) => {
+    setSelectedSet(set)
+    setAddModalOpen(true)
+  }
+
+  const handleAddSuccess = () => {
+    setAddModalOpen(false)
+    setSelectedSet(null)
   }
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
-          Browse Sets
+          Browse & Search Sets
         </h1>
-        <p className="text-muted-foreground">Search and explore LEGO sets, view details, and add to your collection</p>
+        <p className="text-muted-foreground">Search for LEGO sets, browse results, and add them to your collection</p>
       </div>
 
       <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/30 to-transparent dark:from-purple-950/20">
         <CardHeader>
           <CardTitle>Search LEGO Sets</CardTitle>
           <CardDescription>
-            Search by set number, name, or theme. Click on any set to view full details.
+            Search by set number, name, or theme. Results appear as you type.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by set number, name, or theme (e.g., 75192, Millennium Falcon, Star Wars)..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button type="submit" disabled={query.length < 2}>
-              Search
-            </Button>
-          </form>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by set number, name, or theme (e.g., 75192, Millennium Falcon, Star Wars)..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-          {query.length < 2 && (
+          {query.length > 0 && query.length < 2 && (
             <p className="text-sm text-muted-foreground mt-4">
               Type at least 2 characters to search for sets
+            </p>
+          )}
+
+          {query.length === 0 && (
+            <p className="text-sm text-muted-foreground mt-4">
+              Start typing to search for LEGO sets. Try: 75192, Millennium, Titanic, or Disney
             </p>
           )}
         </CardContent>
@@ -83,16 +95,18 @@ export default function BrowsePage() {
       {error && (
         <Card>
           <CardContent className="p-12 text-center">
-            <p className="text-red-500">Error searching sets. Please try again.</p>
+            <p className="text-red-500 mb-2">Error searching sets</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
+            <p className="text-sm text-muted-foreground mt-2">Please try again or check your connection</p>
           </CardContent>
         </Card>
       )}
 
-      {!isLoading && !error && searchTerm && (!data || data.length === 0) && (
+      {!isLoading && !error && query.length >= 2 && (!data || data.length === 0) && (
         <Card>
           <CardContent className="p-12 text-center">
             <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No sets found for "{searchTerm}"</p>
+            <p className="text-muted-foreground">No sets found for "{query}"</p>
             <p className="text-sm text-muted-foreground mt-2">
               Try searching for: 75192, Millennium, Titanic, or Disney
             </p>
@@ -120,7 +134,7 @@ export default function BrowsePage() {
                       </CardDescription>
                     </div>
                     {set.retired && (
-                      <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
+                      <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white shrink-0">
                         ⭐ Retired
                       </Badge>
                     )}
@@ -147,12 +161,22 @@ export default function BrowsePage() {
                         MSRP: {formatCurrency(set.msrp_cents)}
                       </p>
                     )}
-                    <Button className="w-full" variant="default" asChild>
-                      <Link href={`/browse/${set.id}`}>
-                        View Details
-                        <ExternalLink className="h-4 w-4 ml-2" />
-                      </Link>
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1" 
+                        variant="default"
+                        onClick={() => handleAddToCollection(set)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add to Collection
+                      </Button>
+                      <Button className="flex-1" variant="outline" asChild>
+                        <Link href={`/browse/${set.id || set.set_number}`}>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Details
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -160,7 +184,20 @@ export default function BrowsePage() {
           </div>
         </div>
       )}
+
+      {selectedSet && (
+        <AddItemModal
+          open={addModalOpen}
+          onOpenChange={(open) => {
+            setAddModalOpen(open)
+            if (!open) {
+              setSelectedSet(null)
+            }
+          }}
+          set={selectedSet}
+          onSuccess={handleAddSuccess}
+        />
+      )}
     </div>
   )
 }
-
