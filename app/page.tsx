@@ -1,6 +1,10 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DownloadModal } from '@/components/download-modal'
 import { 
   Scan, 
   TrendingUp, 
@@ -20,7 +24,7 @@ import {
 } from 'lucide-react'
 
 export default function LandingPage() {
-  const APP_STORE_URL = 'https://apps.apple.com/app/brickcheck'
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-yellow-50 via-blue-50 to-green-50 dark:from-gray-900 dark:via-purple-900/20">
@@ -32,20 +36,13 @@ export default function LandingPage() {
               BrickCheck
             </h1>
             <Button 
-              asChild 
+              onClick={() => setDownloadModalOpen(true)}
               size="sm"
               className="bg-gradient-lego-blue hover:opacity-90 text-white text-xs sm:text-sm whitespace-nowrap button-lift transition-all duration-300"
             >
-              <a 
-                href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 group-hover:animate-bounce-gentle" />
-                <span className="hidden sm:inline">Download</span>
-                <span className="sm:hidden">Get App</span>
-              </a>
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 group-hover:animate-bounce-gentle" />
+              <span className="hidden sm:inline">Download</span>
+              <span className="sm:hidden">Get App</span>
             </Button>
           </div>
         </div>
@@ -74,19 +71,12 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
             <Button 
-              asChild 
+              onClick={() => setDownloadModalOpen(true)}
               size="lg" 
               className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto bg-gradient-lego-red hover:opacity-90 text-white border-0 shadow-lg w-full sm:w-auto button-lift transition-all duration-300"
             >
-              <a 
-                href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 sm:gap-3"
-              >
-                <Download className="h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-300 group-hover:animate-bounce-gentle" />
-                Download App
-              </a>
+              <Download className="h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-300 group-hover:animate-bounce-gentle" />
+              Download App
             </Button>
           </div>
 
@@ -256,19 +246,12 @@ export default function LandingPage() {
                 ))}
               </ul>
               <Button 
-                asChild 
+                onClick={() => setDownloadModalOpen(true)}
                 size="lg" 
                 className="mt-4 sm:mt-6 bg-gradient-lego-blue hover:opacity-90 text-white w-full sm:w-auto button-lift transition-all duration-300"
               >
-                <a 
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center sm:justify-start gap-2 px-6 py-5 sm:py-6"
-                >
-                  <Download className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 animate-bounce-gentle" />
-                  Download Now
-                </a>
+                <Download className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 animate-bounce-gentle" />
+                Download Now
               </Button>
             </div>
             <div className="hidden sm:block order-2">
@@ -501,19 +484,12 @@ export default function LandingPage() {
             </CardHeader>
             <CardContent className="p-6 sm:p-8 md:pb-12">
               <Button 
-                asChild 
+                onClick={() => setDownloadModalOpen(true)}
                 size="lg" 
                 className="bg-white text-primary hover:bg-white/90 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto shadow-lg w-full sm:w-auto button-lift transition-all duration-300"
               >
-                <a 
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3"
-                >
-                  <Download className="h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-300 animate-bounce-gentle" />
-                  Download Now
-                </a>
+                <Download className="h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-300 animate-bounce-gentle" />
+                Download Now
               </Button>
             </CardContent>
           </Card>
@@ -549,20 +525,13 @@ export default function LandingPage() {
                 Available now on the App Store for iPhone and iPad, and Google Play for Android devices.
               </p>
               <Button 
-                asChild 
+                onClick={() => setDownloadModalOpen(true)}
                 variant="outline"
                 size="sm"
                 className="border-primary/50 hover:bg-primary/10 text-xs sm:text-sm w-full sm:w-auto button-lift transition-all duration-300"
               >
-                <a 
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center sm:justify-start gap-1 sm:gap-2"
-                >
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 animate-bounce-gentle" />
-                  Download
-                </a>
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 animate-bounce-gentle" />
+                Download
               </Button>
             </div>
           </div>
@@ -572,6 +541,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Download Modal */}
+      <DownloadModal open={downloadModalOpen} onOpenChange={setDownloadModalOpen} />
     </div>
   )
 }
