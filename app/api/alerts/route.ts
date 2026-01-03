@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ alert: data }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 })
     }
     console.error('Error creating alert:', error)
     return NextResponse.json(

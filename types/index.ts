@@ -108,6 +108,7 @@ export type Database = {
 export type Set = Database['public']['Tables']['sets']['Row']
 export type SetIdentifier = Database['public']['Tables']['set_identifiers']['Row']
 export type CollectionItem = Database['public']['Tables']['user_collection_items']['Row']
+export type CollectionItemWithSet = CollectionItem & { sets: Set | null }
 export type PriceSnapshot = Database['public']['Tables']['price_snapshots']['Row']
 export type Alert = Database['public']['Tables']['alerts']['Row']
 export type AlertEvent = Database['public']['Tables']['alert_events']['Row']

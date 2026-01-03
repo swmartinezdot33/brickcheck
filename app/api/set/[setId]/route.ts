@@ -71,11 +71,11 @@ export async function GET(
       if (!acc[date]) {
         acc[date] = { date, sealed: [], used: [] }
       }
-      acc[date][snapshot.condition.toLowerCase()].push(snapshot.price_cents)
+      acc[date][snapshot.condition.toLowerCase() as 'sealed' | 'used'].push(snapshot.price_cents)
       return acc
     }, {} as Record<string, { date: string; sealed: number[]; used: number[] }>)
 
-    const chartSeries = Object.values(chartData)
+    const chartSeries = (Object.values(chartData) as Array<{ date: string; sealed: number[]; used: number[] }>)
       .map((day) => ({
         date: day.date,
         sealed: day.sealed.length > 0 ? day.sealed.reduce((a, b) => a + b, 0) / day.sealed.length : null,

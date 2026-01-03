@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SetSearch } from '@/components/collection/SetSearch'
 import { CollectionList } from '@/components/collection/CollectionList'
-import { CollectionItem } from '@/types'
+import { CollectionItemWithSet } from '@/types'
 import { AddItemModal } from '@/components/collection/AddItemModal'
 
 export default function CollectionPage() {
-  const [editingItem, setEditingItem] = useState<CollectionItem | null>(null)
+  const [editingItem, setEditingItem] = useState<CollectionItemWithSet | null>(null)
   const [searchTab, setSearchTab] = useState('search')
 
   return (

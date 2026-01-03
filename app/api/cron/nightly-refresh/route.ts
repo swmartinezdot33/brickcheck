@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Get all sets that appear in at least one user's collection
     const { data: collectionSets, error: collectionError } = await supabase
       .from('user_collection_items')
-      .select('set_id, sets(id, set_number))')
+      .select('set_id, sets!inner(id, set_number)')
       .not('set_id', 'is', null)
 
     if (collectionError) {

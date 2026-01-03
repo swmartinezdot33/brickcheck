@@ -11,7 +11,7 @@ export class MockCatalogProvider implements CatalogProvider {
       pieceCount: 7541,
       msrpCents: 84999,
       retired: false,
-      imageUrl: null,
+      imageUrl: undefined,
       gtin: '57020161175192',
     },
     {
@@ -22,7 +22,7 @@ export class MockCatalogProvider implements CatalogProvider {
       pieceCount: 4080,
       msrpCents: 34999,
       retired: true,
-      imageUrl: null,
+      imageUrl: undefined,
       gtin: '57020161171040',
     },
     {
@@ -33,7 +33,7 @@ export class MockCatalogProvider implements CatalogProvider {
       pieceCount: 9090,
       msrpCents: 67999,
       retired: false,
-      imageUrl: null,
+      imageUrl: undefined,
       gtin: '57020161110294',
     },
     {
@@ -44,7 +44,7 @@ export class MockCatalogProvider implements CatalogProvider {
       pieceCount: 2079,
       msrpCents: 19999,
       retired: true,
-      imageUrl: null,
+      imageUrl: undefined,
       gtin: '57020161121327',
     },
     {
@@ -55,7 +55,7 @@ export class MockCatalogProvider implements CatalogProvider {
       pieceCount: 2207,
       msrpCents: 17999,
       retired: false,
-      imageUrl: null,
+      imageUrl: undefined,
       gtin: '57020161110279',
     },
   ]

@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Edit, Package } from 'lucide-react'
-import { CollectionItem } from '@/types'
+import { CollectionItemWithSet } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
 interface CollectionListProps {
-  onEdit?: (item: CollectionItem) => void
+  onEdit?: (item: CollectionItemWithSet) => void
 }
 
 export function CollectionList({ onEdit }: CollectionListProps) {
@@ -21,7 +21,7 @@ export function CollectionList({ onEdit }: CollectionListProps) {
       const res = await fetch('/api/collection')
       if (!res.ok) throw new Error('Failed to fetch collection')
       const data = await res.json()
-      return data.items as (CollectionItem & { sets: any })[]
+      return data.items as CollectionItemWithSet[]
     },
   })
 

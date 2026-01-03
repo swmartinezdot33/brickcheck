@@ -58,7 +58,7 @@ export async function PATCH(
     return NextResponse.json({ alert: data })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 })
     }
     console.error('Error updating alert:', error)
     return NextResponse.json(
