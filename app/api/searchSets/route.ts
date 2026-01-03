@@ -13,11 +13,52 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Search using mock provider (will be replaced with Brickset in Milestone D)
-    const results = await catalogProvider.searchSets(query)
+    const supabase = await createClient()
+
+    // First, try searching the database for existing sets
+    // Use textSearch or multiple queries for better compatibility
+    const searchPattern = `%${query}%`
+    
+    // Try multiple queries and combine results
+    const [nameResults, numberResults, themeResults] = await Promise.all([
+      supabase.from('sets').select('*').ilike('name', searchPattern).limit(50),
+      supabase.from('sets').select('*').ilike('set_number', searchPattern).limit(50),
+      supabase.from('sets').select('*').ilike('theme', searchPattern).limit(50),
+    ])
+
+    // Combine and deduplicate results
+    const allResults = [
+      ...(nameResults.data || []),
+      ...(numberResults.data || []),
+      ...(themeResults.data || []),
+    ]
+    
+    // Remove duplicates by set_number
+    const uniqueResults = Array.from(
+      new Map(allResults.map((set) => [set.set_number, set])).values()
+    ).slice(0, 50)
+
+    // If we found results in database, return them
+    if (uniqueResults.length > 0) {
+      return NextResponse.json({ results: uniqueResults })
+    }
+
+    // If we found results in database, return them
+    if (dbResults && dbResults.length > 0) {
+      return NextResponse.json({ results: dbResults })
+    }
+
+    // If no database results, try the catalog provider (Brickset or Mock)
+    let results: any[] = []
+    try {
+      results = await catalogProvider.searchSets(query)
+    } catch (providerError) {
+      console.error('Catalog provider error:', providerError)
+      // If provider fails, return empty results
+      return NextResponse.json({ results: [] })
+    }
 
     // Upsert sets into database
-    const supabase = await createClient()
     const setsToInsert = results.map((set) => ({
       set_number: set.setNumber,
       name: set.name,

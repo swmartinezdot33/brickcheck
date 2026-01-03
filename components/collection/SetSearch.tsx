@@ -12,12 +12,15 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
   const [selectedSet, setSelectedSet] = useState<Set | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['search-sets', query],
     queryFn: async () => {
       if (!query || query.length < 2) return []
       const res = await fetch(`/api/searchSets?q=${encodeURIComponent(query)}`)
-      if (!res.ok) throw new Error('Failed to search')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to search')
+      }
       const data = await res.json()
       return data.results as Set[]
     },
@@ -47,7 +50,17 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
             {isLoading && (
               <div className="p-4 text-sm text-muted-foreground text-center">Searching...</div>
             )}
-            {!isLoading && query.length >= 2 && (!data || data.length === 0) && (
+            {error && (
+              <CommandEmpty>
+                <div className="py-6 text-center">
+                  <p className="text-sm text-red-500">Error searching: {error.message}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Please try again or check your connection
+                  </p>
+                </div>
+              </CommandEmpty>
+            )}
+            {!isLoading && !error && query.length >= 2 && (!data || data.length === 0) && (
               <CommandEmpty>
                 <div className="py-6 text-center">
                   <p className="text-sm text-muted-foreground">No sets found.</p>
