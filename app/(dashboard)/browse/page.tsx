@@ -147,12 +147,12 @@ export default function BrowsePage() {
                         MSRP: {formatCurrency(set.msrp_cents)}
                       </p>
                     )}
-                    <Link href={`/browse/${set.id}`}>
-                      <Button className="w-full" variant="default">
+                    <Button className="w-full" variant="default" asChild>
+                      <Link href={`/browse/${set.id}`}>
                         View Details
                         <ExternalLink className="h-4 w-4 ml-2" />
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

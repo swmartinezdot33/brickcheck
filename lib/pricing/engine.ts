@@ -14,6 +14,14 @@ export interface PriceEstimate {
   variance: number
 }
 
+export interface PriceForecast {
+  predictedValue: number
+  confidence: number // R-squared
+  slope: number // Daily price change in cents
+  forecastDate: string
+  trend: 'UP' | 'DOWN' | 'STABLE'
+}
+
 /**
  * Calculate estimated value from price snapshots using median, trimmed mean, and confidence scoring
  */
@@ -121,3 +129,63 @@ export function calculateTrend(
   return { change, percentChange }
 }
 
+/**
+ * Calculate price forecast using Linear Regression
+ * @param snapshots Price history
+ * @param condition Set condition
+ * @param daysToForecast Number of days to forecast into the future
+ */
+export function calculateForecast(
+  snapshots: PriceSnapshot[],
+  condition: 'SEALED' | 'USED',
+  daysToForecast: number = 180 // Default 6 months
+): PriceForecast | null {
+  const filtered = snapshots
+    .filter((s) => s.condition === condition)
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
+  if (filtered.length < 5) { // Need minimum samples for meaningful regression
+    return null
+  }
+
+  // Convert timestamps to days from start (x) and prices to cents (y)
+  const startTime = new Date(filtered[0].timestamp).getTime()
+  const data = filtered.map(s => ({
+    x: (new Date(s.timestamp).getTime() - startTime) / (24 * 60 * 60 * 1000), // days
+    y: s.price_cents
+  }))
+
+  const n = data.length
+  const sumX = data.reduce((acc, p) => acc + p.x, 0)
+  const sumY = data.reduce((acc, p) => acc + p.y, 0)
+  const sumXY = data.reduce((acc, p) => acc + p.x * p.y, 0)
+  const sumXX = data.reduce((acc, p) => acc + p.x * p.x, 0)
+
+  // Linear regression formulas: y = mx + b
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+  const intercept = (sumY - slope * sumX) / n
+
+  // Calculate R-squared (Coefficient of Determination)
+  const meanY = sumY / n
+  const ssTot = data.reduce((acc, p) => acc + Math.pow(p.y - meanY, 2), 0)
+  const ssRes = data.reduce((acc, p) => {
+    const predictedY = slope * p.x + intercept
+    return acc + Math.pow(p.y - predictedY, 2)
+  }, 0)
+  const rSquared = ssTot === 0 ? 0 : 1 - (ssRes / ssTot)
+
+  // Predict future value
+  const lastDay = data[data.length - 1].x
+  const futureDay = lastDay + daysToForecast
+  const predictedValue = Math.round(slope * futureDay + intercept)
+
+  const trend = slope > 5 ? 'UP' : slope < -5 ? 'DOWN' : 'STABLE'
+
+  return {
+    predictedValue,
+    confidence: Math.max(0, rSquared), // R-squared is 0-1
+    slope,
+    forecastDate: new Date(startTime + futureDay * 24 * 60 * 60 * 1000).toISOString(),
+    trend
+  }
+}

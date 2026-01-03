@@ -106,7 +106,8 @@ export async function GET(request: NextRequest) {
         bricklink_id: set.bricklinkId || null,
       }))
 
-      const { data: upsertedSets, error } = await supabase
+      console.log(`[searchSets] Upserting ${setsToInsert.length} sets to database...`)
+      const { data: upsertedSets, error: upsertError } = await supabase
         .from('sets')
         .upsert(setsToInsert, {
           onConflict: 'set_number',
@@ -114,13 +115,19 @@ export async function GET(request: NextRequest) {
         })
         .select()
 
-      if (!error && upsertedSets) {
+      if (upsertError) {
+        console.error('[searchSets] ❌ Failed to upsert sets to database:', upsertError)
+        console.error('[searchSets] Error details:', JSON.stringify(upsertError, null, 2))
+        // Continue with database results even if upsert failed
+      } else if (upsertedSets && upsertedSets.length > 0) {
+        console.log(`[searchSets] ✅ Successfully upserted ${upsertedSets.length} sets to database`)
+        
         // Upsert GTINs if available
         for (const set of apiResults) {
           if (set.gtin) {
             const setData = upsertedSets.find((s) => s.set_number === set.setNumber)
             if (setData) {
-              await supabase.from('set_identifiers').upsert(
+              const { error: gtinError } = await supabase.from('set_identifiers').upsert(
                 {
                   set_id: setData.id,
                   identifier_type: 'GTIN',
@@ -132,30 +139,45 @@ export async function GET(request: NextRequest) {
                   ignoreDuplicates: false,
                 }
               )
+              if (gtinError) {
+                console.warn(`[searchSets] Failed to upsert GTIN for set ${set.setNumber}:`, gtinError)
+              }
             }
           }
         }
 
-        // Map results to include database IDs
+        // Create a map of set_number to database set for quick lookup
+        const dbSetMap = new Map(upsertedSets.map((s) => [s.set_number, s]))
+
+        // Map results to include database IDs - prioritize database IDs
         const finalResults = resultsArray.map((result) => {
-          const dbSet = upsertedSets.find((s) => s.set_number === result.setNumber)
-          return dbSet || {
-            id: `temp-${result.setNumber}`,
-            set_number: result.setNumber,
-            name: result.name,
-            theme: result.theme,
-            year: result.year,
-            piece_count: result.pieceCount,
-            msrp_cents: result.msrpCents,
-            image_url: result.imageUrl,
-            retired: result.retired,
-            brickset_id: result.bricksetId,
-            bricklink_id: result.bricklinkId,
+          const dbSet = dbSetMap.get(result.setNumber)
+          if (dbSet) {
+            console.log(`[searchSets] ✅ Mapped set ${result.setNumber} to database ID: ${dbSet.id}`)
+            return dbSet
+          } else {
+            // This shouldn't happen if upsert was successful, but log it if it does
+            console.warn(`[searchSets] ⚠️ Set ${result.setNumber} not found in upserted sets, using temp ID`)
+            return {
+              id: `temp-${result.setNumber}`,
+              set_number: result.setNumber,
+              name: result.name,
+              theme: result.theme,
+              year: result.year,
+              piece_count: result.pieceCount,
+              msrp_cents: result.msrpCents,
+              image_url: result.imageUrl,
+              retired: result.retired,
+              brickset_id: result.bricksetId,
+              bricklink_id: result.bricklinkId,
+            }
           }
         })
 
-        console.log(`[searchSets] Returning ${finalResults.length} results (${apiResults.length} from API)`)
+        console.log(`[searchSets] ✅ Returning ${finalResults.length} results (${apiResults.length} from API, ${upsertedSets.length} saved to DB)`)
         return NextResponse.json({ results: finalResults })
+      } else {
+        console.warn('[searchSets] ⚠️ Upsert returned no data, but no error occurred')
       }
     }
 

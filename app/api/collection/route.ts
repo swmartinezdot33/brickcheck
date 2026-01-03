@@ -97,16 +97,18 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       
       if (dbSet) {
+        console.log(`[collection/post] ✅ Found set ${setNumber} in database with ID: ${dbSet.id}`)
         setId = dbSet.id
       } else {
         // 2. If not in DB, fetch from Provider and Upsert
-        console.log(`[collection/post] Set ${setNumber} not found in DB, fetching from provider...`)
+        console.log(`[collection/post] Set ${setNumber} not found in DB, fetching from provider and creating...`)
         try {
           const catalogProvider = getCatalogProvider()
           const metadata = await catalogProvider.getSetByNumber(setNumber)
           
           if (metadata) {
-             const { data: newSet, error: upsertError } = await supabase
+            console.log(`[collection/post] ✅ Fetched set metadata from provider: ${metadata.name}`)
+            const { data: newSet, error: upsertError } = await supabase
               .from('sets')
               .upsert({
                 set_number: metadata.setNumber,
@@ -123,14 +125,21 @@ export async function POST(request: NextRequest) {
               .select('id')
               .single()
 
-             if (newSet && !upsertError) {
-                setId = newSet.id
-             } else {
-                 console.error('[collection/post] Failed to upsert set:', upsertError)
-             }
+            if (newSet && !upsertError) {
+              console.log(`[collection/post] ✅ Successfully created/saved set ${setNumber} to database with ID: ${newSet.id}`)
+              setId = newSet.id
+            } else {
+              console.error('[collection/post] ❌ Failed to upsert set to database:', upsertError)
+            }
+          } else {
+            console.warn(`[collection/post] ⚠️ Provider returned no metadata for set ${setNumber}`)
           }
         } catch (e) {
-          console.error('[collection/post] Provider lookup failed:', e)
+          console.error('[collection/post] ❌ Provider lookup failed:', e)
+          if (e instanceof Error) {
+            console.error('[collection/post] Error message:', e.message)
+            console.error('[collection/post] Error stack:', e.stack)
+          }
         }
       }
       

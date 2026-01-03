@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { PriceChart } from '@/components/pricing/PriceChart'
 import { RecentSales } from '@/components/pricing/RecentSales'
+import { PriceForecastCard } from '@/components/pricing/PriceForecastCard'
 import { formatCurrency } from '@/lib/utils'
 import { Loader2, TrendingUp, TrendingDown } from 'lucide-react'
 
@@ -72,7 +73,7 @@ export default function SetDetailPage({
         <TabsContent value="sealed" className="space-y-4">
           {pricing.sealed ? (
             <>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="border-2 border-primary/20 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Estimated Value</CardTitle>
@@ -86,6 +87,7 @@ export default function SetDetailPage({
                     </p>
                   </CardContent>
                 </Card>
+                <PriceForecastCard setId={set.id} condition="SEALED" />
                 {pricing.trends.sealed['7d'] && (
                   <Card className={`border-2 border-primary/20 bg-gradient-to-br ${pricing.trends.sealed['7d'].percentChange >= 0 ? 'from-green-50/50 dark:from-green-950/20' : 'from-red-50/50 dark:from-red-950/20'} to-transparent`}>
                     <CardHeader className="pb-2">
@@ -148,7 +150,7 @@ export default function SetDetailPage({
         <TabsContent value="used" className="space-y-4">
           {pricing.used ? (
             <>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-950/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Estimated Value</CardTitle>
@@ -162,6 +164,7 @@ export default function SetDetailPage({
                     </p>
                   </CardContent>
                 </Card>
+                <PriceForecastCard setId={set.id} condition="USED" />
                 {pricing.trends.used['7d'] && (
                   <Card className={`border-2 border-primary/20 bg-gradient-to-br ${pricing.trends.used['7d'].percentChange >= 0 ? 'from-green-50/50 dark:from-green-950/20' : 'from-red-50/50 dark:from-red-950/20'} to-transparent`}>
                     <CardHeader className="pb-2">
