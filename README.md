@@ -1,36 +1,165 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BrickCheck - LEGO Collection Value Tracker
 
-## Getting Started
+A production-ready MVP for tracking LEGO collection market values over time, similar to a stock tracker for LEGO sets.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Collection Management**: Track sealed and used LEGO sets with detailed metadata
+- **Barcode Scanning**: Scan LEGO box barcodes to quickly identify and add sets
+- **Price Tracking**: Real-time market value tracking with historical price charts
+- **Price Alerts**: Get notified when set values cross thresholds or change significantly
+- **Dashboard**: View total collection value, trends, and biggest movers
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Frontend**: Next.js 14+ (App Router), TypeScript, Tailwind CSS, shadcn/ui, React Query
+- **Backend**: Next.js API Routes, Supabase (Postgres, Auth, Storage)
+- **Background Jobs**: Vercel Cron
+- **Charts**: Recharts
+- **Barcode Scanning**: @zxing/library
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Prerequisites
 
-## Learn More
+- Node.js 18+ and npm
+- Supabase account and project
+- (Optional) Brickset API key
+- (Optional) BrickLink API credentials
 
-To learn more about Next.js, take a look at the following resources:
+## Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Clone and install dependencies**:
+   ```bash
+   npm install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. **Set up Supabase**:
+   - Create a new Supabase project
+   - Run the migrations in `supabase/migrations/` in order:
+     - `001_initial_schema.sql`
+     - `002_rls_policies.sql`
+     - `003_indexes.sql`
 
-## Deploy on Vercel
+3. **Configure environment variables**:
+   Create a `.env.local` file:
+   ```bash
+   # Supabase
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   # APIs (optional for MVP - using mocks initially)
+   BRICKSET_API_KEY=
+   BRICKLINK_CONSUMER_KEY=
+   BRICKLINK_CONSUMER_SECRET=
+   BRICKLINK_TOKEN=
+   BRICKLINK_TOKEN_SECRET=
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   # App
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   VERCEL_CRON_SECRET=your_random_secret_for_cron_auth
+
+   # Optional
+   SENTRY_DSN=
+   ```
+
+4. **Seed the database** (optional, for local development):
+   ```bash
+   npx tsx scripts/seed.ts
+   ```
+
+5. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
+
+6. **Open [http://localhost:3000](http://localhost:3000)** in your browser.
+
+## Database Schema
+
+The application uses the following main tables:
+
+- `sets`: Canonical LEGO sets catalog
+- `set_identifiers`: GTIN/barcode to set mapping
+- `user_collection_items`: User's collection items
+- `price_snapshots`: Raw price data from APIs
+- `alerts`: User price alerts
+- `alert_events`: Triggered alert history
+
+See `supabase/migrations/` for the complete schema.
+
+## API Routes
+
+### Public
+- `GET /api/searchSets?q={query}` - Search for sets
+
+### Authenticated
+- `GET /api/scanLookup?gtin={gtin}` - Lookup set by barcode
+- `GET /api/set/[setId]` - Get set details with pricing
+- `GET /api/collection` - Get user's collection
+- `POST /api/collection` - Add item to collection
+- `PATCH /api/collection/[id]` - Update collection item
+- `DELETE /api/collection/[id]` - Remove from collection
+- `GET /api/collection/stats` - Dashboard statistics
+- `GET /api/alerts` - Get user's alerts
+- `POST /api/alerts` - Create alert
+- `PATCH /api/alerts/[id]` - Update alert
+- `DELETE /api/alerts/[id]` - Delete alert
+
+### Cron (secured)
+- `POST /api/price/refresh?setId={id}` - Refresh price for a set
+- `POST /api/cron/nightly-refresh` - Nightly refresh job (Vercel cron)
+
+## Pricing Engine
+
+The pricing engine calculates estimated values using:
+
+1. **Median Price**: Middle value of all price points
+2. **Trimmed Mean**: Average after dropping top/bottom 10%
+3. **Confidence Score**: Based on sample size and variance
+4. **Final Estimate**: Weighted blend of median (60%) and trimmed mean (40%)
+
+## Deployment
+
+### Vercel
+
+1. Push your code to GitHub
+2. Import the project in Vercel
+3. Add all environment variables in Vercel dashboard
+4. Configure the cron job in `vercel.json` (already set up for 2 AM daily)
+
+The cron job will automatically refresh prices for all sets in user collections.
+
+## Development Milestones
+
+- ✅ **Milestone A**: Project scaffolding + Auth + Base UI
+- ✅ **Milestone B**: Set search + Add to collection
+- ✅ **Milestone C**: Barcode scan flow
+- ⏳ **Milestone D**: Brickset integration (placeholder ready)
+- ✅ **Milestone E**: BrickLink integration structure (using mocks)
+- ✅ **Milestone F**: Pricing engine + Charts
+- ✅ **Milestone G**: Alerts + Cron refresh
+- ⏳ **Milestone H**: Mobile packaging (Capacitor/Expo)
+
+## Phase Roadmap
+
+### MVP (Current)
+- Web app with Brickset + BrickLink integration structure
+- Core collection management
+- Price tracking and alerts
+- Barcode scanning
+
+### v1 Mobile
+- Capacitor or Expo wrapper
+- Native camera for scanning
+- Push notifications for alerts
+- Offline mode basics
+
+### v2 Marketplace Integrations
+- StockX integration (if API access)
+- eBay comps (if official API)
+- Multiple source price blending
+- Advanced analytics
+
+## License
+
+MIT
