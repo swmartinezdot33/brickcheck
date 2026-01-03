@@ -33,7 +33,9 @@ export class CompositeCatalogProvider implements CatalogProvider {
     // Try all providers and merge results
     for (const provider of this.providers) {
       try {
+        console.log(`[CompositeCatalogProvider] Searching with ${provider.constructor.name} for: "${query}"`)
         const results = await provider.searchSets(query)
+        console.log(`[CompositeCatalogProvider] ${provider.constructor.name} returned ${results.length} results`)
         for (const result of results) {
           // Deduplicate by set number, prefer more complete data
           if (!seenSetNumbers.has(result.setNumber)) {

@@ -1,11 +1,14 @@
 import { CatalogProvider, PriceProvider, SetMetadata, PriceData } from './base'
+import { createRateLimiter } from './rate-limiter'
 
 // BrickEconomy API provider
 // Documentation: https://www.brickeconomy.com/api-reference
 // Requires Premium membership with API key
+// Rate limits: 4 requests/minute, 100 requests/day
 export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
   private apiKey?: string
   private baseUrl = 'https://www.brickeconomy.com/api/v1'
+  private rateLimiter = createRateLimiter('BRICKECONOMY')
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.BRICKECONOMY_API_KEY
@@ -47,11 +50,16 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
   // CatalogProvider methods
   async searchSets(query: string): Promise<SetMetadata[]> {
     try {
-      // BrickEconomy API search endpoint
-      const data = await this.makeRequest('/sets/search', {
-        q: query,
-        limit: '50',
-      })
+      console.log(`[BrickEconomyProvider] Searching for: "${query}"`)
+      // Use rate limiter to respect API limits
+      const data = await this.rateLimiter.execute(() =>
+        this.makeRequest('/sets/search', {
+          q: query,
+          limit: '50',
+        })
+      )
+      
+      console.log(`[BrickEconomyProvider] Raw API response keys:`, Object.keys(data || {}))
 
       if (!data.sets || !Array.isArray(data.sets)) {
         return []
@@ -78,7 +86,7 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
 
   async getSetByNumber(setNumber: string): Promise<SetMetadata | null> {
     try {
-      const data = await this.makeRequest(`/sets/${setNumber}`)
+      const data = await this.rateLimiter.execute(() => this.makeRequest(`/sets/${setNumber}`))
 
       if (!data || !data.set_number) {
         return null
@@ -106,10 +114,12 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
   async getSetByGTIN(gtin: string): Promise<SetMetadata | null> {
     try {
       // BrickEconomy may not have direct GTIN lookup, try search
-      const data = await this.makeRequest('/sets/search', {
-        barcode: gtin,
-        limit: '1',
-      })
+      const data = await this.rateLimiter.execute(() =>
+        this.makeRequest('/sets/search', {
+          barcode: gtin,
+          limit: '1',
+        })
+      )
 
       if (!data.sets || !Array.isArray(data.sets) || data.sets.length === 0) {
         return null
@@ -138,10 +148,12 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
   // PriceProvider methods
   async getPrices(setNumber: string, condition: 'SEALED' | 'USED'): Promise<PriceData[]> {
     try {
-      // Get price history from BrickEconomy
-      const data = await this.makeRequest(`/sets/${setNumber}/prices`, {
-        condition: condition.toLowerCase(),
-      })
+      // Get price history from BrickEconomy (with rate limiting)
+      const data = await this.rateLimiter.execute(() =>
+        this.makeRequest(`/sets/${setNumber}/prices`, {
+          condition: condition.toLowerCase(),
+        })
+      )
 
       if (!data.prices || !Array.isArray(data.prices)) {
         return []

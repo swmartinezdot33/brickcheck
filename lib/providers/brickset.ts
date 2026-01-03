@@ -54,14 +54,39 @@ export class BricksetProvider implements CatalogProvider {
       })
 
       const responseText = await response.text()
+      console.log(`[BricksetProvider] API Response status: ${response.status}`)
+      console.log(`[BricksetProvider] API Response preview: ${responseText.substring(0, 200)}`)
 
       if (!response.ok) {
         console.error('Brickset API error response:', responseText)
         // If it's a userHash error, log it but don't fail completely
-        if (responseText.includes('userHash')) {
+        if (responseText.includes('userHash') || responseText.includes('userHash')) {
           throw new Error('Brickset API requires userHash. Some methods may need user authentication via login.')
         }
         throw new Error(`Brickset API error: ${response.status} ${response.statusText}`)
+      }
+
+      // Brickset API v3 returns XML (SOAP), not JSON
+      // We need to parse XML or use a different approach
+      // For now, check if it's XML and log the structure
+      if (responseText.trim().startsWith('<?xml') || responseText.trim().startsWith('<')) {
+        console.warn('[BricksetProvider] API returned XML (SOAP) format. XML parsing not yet implemented.')
+        console.log('[BricksetProvider] XML response structure:', responseText.substring(0, 500))
+        // Try to extract basic info from XML using regex (temporary solution)
+        const setNumberMatch = responseText.match(/<number>(.*?)<\/number>/)
+        const nameMatch = responseText.match(/<name>(.*?)<\/name>/)
+        
+        if (setNumberMatch && nameMatch) {
+          // Return a basic result from XML
+          return {
+            sets: [{
+              number: setNumberMatch[1],
+              name: nameMatch[1],
+            }]
+          }
+        }
+        
+        throw new Error('Brickset API returned XML format. XML parsing needs to be implemented.')
       }
 
       // Try to parse as JSON
@@ -69,10 +94,8 @@ export class BricksetProvider implements CatalogProvider {
         const data = JSON.parse(responseText)
         return data
       } catch (parseError) {
-        // If not JSON, might be XML (SOAP response)
-        console.warn('Brickset API returned non-JSON response, attempting to extract data')
-        // For now, return empty - we'll need to implement XML parsing if needed
-        throw new Error('Brickset API returned unexpected format. Expected JSON but got: ' + responseText.substring(0, 100))
+        console.error('[BricksetProvider] Failed to parse response as JSON:', parseError)
+        throw new Error('Brickset API returned unexpected format: ' + responseText.substring(0, 200))
       }
     } catch (error) {
       console.error('Brickset API request failed:', error)
@@ -82,15 +105,21 @@ export class BricksetProvider implements CatalogProvider {
 
   async searchSets(query: string): Promise<SetMetadata[]> {
     try {
+      console.log(`[BricksetProvider] Searching for: "${query}"`)
       const data = await this.makeRequest('getSets', {
         query: query,
         orderBy: 'Number',
         pageSize: '50',
       })
 
+      console.log(`[BricksetProvider] Raw API response:`, JSON.stringify(data).substring(0, 500))
+
       if (!data.sets || !Array.isArray(data.sets)) {
+        console.log(`[BricksetProvider] No sets in response or invalid format`)
         return []
       }
+      
+      console.log(`[BricksetProvider] Found ${data.sets.length} sets`)
 
       return data.sets.map((set: any) => ({
         setNumber: set.number || '',
