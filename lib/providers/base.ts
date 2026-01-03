@@ -25,7 +25,7 @@ export interface PriceData {
 }
 
 export interface CatalogProvider {
-  searchSets(query: string): Promise<SetMetadata[]>
+  searchSets(query: string, limit?: number): Promise<SetMetadata[]>
   getSetByNumber(setNumber: string): Promise<SetMetadata | null>
   getSetByGTIN(gtin: string): Promise<SetMetadata | null>
 }

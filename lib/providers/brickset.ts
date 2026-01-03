@@ -126,13 +126,14 @@ export class BricksetProvider implements CatalogProvider {
     }
   }
 
-  async searchSets(query: string): Promise<SetMetadata[]> {
+  async searchSets(query: string, limit?: number): Promise<SetMetadata[]> {
     try {
       console.log(`[BricksetProvider] Searching for: "${query}"`)
+      const pageSize = limit ? Math.min(limit, 100).toString() : '50'
       const data = await this.makeRequest('getSets', {
         query: query,
         orderBy: 'Number',
-        pageSize: '50',
+        pageSize: pageSize,
       })
 
       console.log(`[BricksetProvider] Raw API response:`, JSON.stringify(data).substring(0, 500))

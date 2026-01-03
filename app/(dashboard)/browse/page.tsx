@@ -1,12 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Loader2, Package, ExternalLink, Plus } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Search, Loader2, Package, ExternalLink, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Set } from '@/types'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
@@ -16,6 +23,8 @@ export default function BrowsePage() {
   const [query, setQuery] = useState('')
   const [selectedSet, setSelectedSet] = useState<Set | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [itemsPerPage, setItemsPerPage] = useState(25)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Real-time search as user types (debounced by React Query)
   const { data, isLoading, error } = useQuery({
@@ -42,6 +51,31 @@ export default function BrowsePage() {
   const handleAddSuccess = () => {
     setAddModalOpen(false)
     setSelectedSet(null)
+  }
+
+  // Calculate pagination
+  const paginatedData = useMemo(() => {
+    if (!data) return { items: [], total: 0, totalPages: 0, start: 0, end: 0 }
+
+    const total = data.length
+    const itemsToShow = itemsPerPage === -1 ? total : itemsPerPage
+    const totalPages = Math.ceil(total / itemsToShow)
+    const start = (currentPage - 1) * itemsToShow
+    const end = Math.min(start + itemsToShow, total)
+
+    return {
+      items: data.slice(start, end),
+      total,
+      totalPages,
+      start,
+      end,
+    }
+  }, [data, itemsPerPage, currentPage])
+
+  // Reset to page 1 when items per page changes
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value))
+    setCurrentPage(1)
   }
 
   return (
@@ -116,14 +150,65 @@ export default function BrowsePage() {
 
       {!isLoading && !error && data && data.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold">
-              {data.length} {data.length === 1 ? 'Set' : 'Sets'} Found
-            </h2>
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-2xl font-semibold">
+                <span className="text-gradient-lego">{paginatedData.total.toLocaleString()}</span> {paginatedData.total === 1 ? 'Set' : 'Sets'} Found
+              </h2>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Results per page:</span>
+                <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="-1">All</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Results info and pagination controls */}
+            <div className="flex items-center justify-between gap-4 flex-wrap bg-muted/50 p-3 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Showing {paginatedData.total === 0 ? 0 : paginatedData.start + 1}–{paginatedData.end} of {paginatedData.total.toLocaleString()} sets
+              </p>
+              
+              {paginatedData.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">Page</span>
+                    <span className="text-sm font-semibold">{currentPage}</span>
+                    <span className="text-sm text-muted-foreground">of {paginatedData.totalPages}</span>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(paginatedData.totalPages, p + 1))}
+                    disabled={currentPage === paginatedData.totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {data.map((set) => (
+            {paginatedData.items.map((set) => (
               <Card key={set.id || set.set_number} className="hover:shadow-lg transition-shadow border-2 border-primary/10 hover:border-primary/30">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
@@ -182,6 +267,33 @@ export default function BrowsePage() {
               </Card>
             ))}
           </div>
+
+          {/* Bottom pagination controls */}
+          {paginatedData.totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+              
+              <div className="text-sm text-muted-foreground mx-4">
+                Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{paginatedData.totalPages}</span>
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.min(paginatedData.totalPages, p + 1))}
+                disabled={currentPage === paginatedData.totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

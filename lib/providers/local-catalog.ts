@@ -116,13 +116,13 @@ export class LocalCatalogProvider implements CatalogProvider {
     return Math.min(score, 100)
   }
 
-  async searchSets(query: string): Promise<SetMetadata[]> {
+  async searchSets(query: string, limit: number = 100): Promise<SetMetadata[]> {
     // 1. Search local database first
     const { data: dbResults, error } = await this.supabase
       .from('sets')
       .select('*')
       .or(`name.ilike.%${query}%,set_number.ilike.%${query}%`)
-      .limit(50)
+      .limit(limit)
 
     if (error) {
       console.error('[LocalCatalogProvider] Database search error:', error)
@@ -139,7 +139,7 @@ export class LocalCatalogProvider implements CatalogProvider {
     // 3. Fallback to API providers
     console.log(`[LocalCatalogProvider] No local results, querying API providers...`)
     try {
-      const apiResults = await this.apiProvider.searchSets(query)
+      const apiResults = await this.apiProvider.searchSets(query, limit)
 
       // 4. Cache all API results
       for (const result of apiResults) {

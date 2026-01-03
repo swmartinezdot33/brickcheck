@@ -61,20 +61,21 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
   }
 
   // CatalogProvider methods
-  async searchSets(query: string): Promise<SetMetadata[]> {
+  async searchSets(query: string, limit?: number): Promise<SetMetadata[]> {
     try {
       console.log(`[BrickEconomyProvider] Searching for: "${query}"`)
       // Use rate limiter to respect API limits
       // Try different endpoint formats - BrickEconomy API might use different paths
       let data: any = null
       let lastError: Error | null = null
+      const apiLimit = limit ? Math.min(limit, 100).toString() : '50'
       
       // Try /sets/search first
       try {
         data = await this.rateLimiter.execute(() =>
           this.makeRequest('/sets/search', {
             q: query,
-            limit: '50',
+            limit: apiLimit,
           })
         )
       } catch (err) {
@@ -86,7 +87,7 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
           data = await this.rateLimiter.execute(() =>
             this.makeRequest('/search', {
               query: query,
-              limit: '50',
+              limit: apiLimit,
             })
           )
         } catch (err2) {
@@ -97,7 +98,7 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
             data = await this.rateLimiter.execute(() =>
               this.makeRequest('/sets', {
                 search: query,
-                limit: '50',
+                limit: apiLimit,
               })
             )
           } catch (err3) {

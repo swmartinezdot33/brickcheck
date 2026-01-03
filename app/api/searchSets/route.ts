@@ -12,18 +12,22 @@ import { getCatalogProvider } from '@/lib/providers'
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const query = searchParams.get('q')
+  const limitParam = searchParams.get('limit')
 
   if (!query || query.trim().length === 0) {
     return NextResponse.json({ error: 'Query parameter "q" is required' }, { status: 400 })
   }
 
+  // Parse limit, default to 100, max 1000 (frontend handles pagination)
+  const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 100, 1), 1000) : 100
+
   try {
     const supabase = await createClient()
-    console.log(`[searchSets] Searching for: "${query}"`)
+    console.log(`[searchSets] Searching for: "${query}" (limit: ${limit})`)
 
     // Use LocalCatalogProvider - it handles local-first logic automatically
     const catalogProvider = getCatalogProvider()
-    const results = await catalogProvider.searchSets(query)
+    const results = await catalogProvider.searchSets(query, limit)
 
     console.log(`[searchSets] Found ${results.length} results`)
 

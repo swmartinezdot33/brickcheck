@@ -101,13 +101,32 @@ export class RebrickableImporter extends BaseImporter {
     for (const row of sets as RebrickableSetRow[]) {
       const theme = row.theme_id ? themeMap.get(row.theme_id) : undefined
 
+      // Handle image URL - make absolute if relative, or construct from set number
+      let imageUrl: string | undefined = undefined
+      if (row.set_img_url) {
+        // If it's already an absolute URL, use it
+        if (row.set_img_url.startsWith('http://') || row.set_img_url.startsWith('https://')) {
+          imageUrl = row.set_img_url
+        } else if (row.set_img_url.startsWith('/')) {
+          // Relative URL - make it absolute
+          imageUrl = `https://rebrickable.com${row.set_img_url}`
+        } else {
+          // Just a path - make it absolute
+          imageUrl = `https://rebrickable.com/${row.set_img_url}`
+        }
+      } else {
+        // Fallback: construct image URL from set number
+        // Rebrickable image format: https://cdn.rebrickable.com/media/sets/{set_num}.jpg
+        imageUrl = `https://cdn.rebrickable.com/media/sets/${row.set_num}.jpg`
+      }
+
       setData.push({
         setNumber: row.set_num,
         name: row.name,
         theme: theme,
         year: row.year ? parseInt(row.year) : undefined,
         pieceCount: row.num_parts ? parseInt(row.num_parts) : undefined,
-        imageUrl: row.set_img_url || undefined,
+        imageUrl: imageUrl,
         retired: false, // Rebrickable doesn't provide retired status
         dataSource: 'REBRICKABLE',
         externalUrls: {

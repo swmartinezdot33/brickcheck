@@ -27,7 +27,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
     }
   }
 
-  async searchSets(query: string): Promise<SetMetadata[]> {
+  async searchSets(query: string, limit: number = 50): Promise<SetMetadata[]> {
     const allResults: SetMetadata[] = []
     const seenSetNumbers = new Set<string>()
 
@@ -35,7 +35,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
     for (const provider of this.providers) {
       try {
         console.log(`[CompositeCatalogProvider] Searching with ${provider.constructor.name} for: "${query}"`)
-        const results = await provider.searchSets(query)
+        const results = await provider.searchSets(query, limit)
         console.log(`[CompositeCatalogProvider] ${provider.constructor.name} returned ${results.length} results`)
         for (const result of results) {
           // Deduplicate by set number, prefer more complete data

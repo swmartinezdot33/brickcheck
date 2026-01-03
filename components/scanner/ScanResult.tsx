@@ -71,6 +71,19 @@ export function ScanResult({ gtin, onReset }: ScanResultProps) {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
+            {data.image_url && (
+              <div className="w-32 h-32 shrink-0 bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={data.image_url}
+                  alt={data.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
