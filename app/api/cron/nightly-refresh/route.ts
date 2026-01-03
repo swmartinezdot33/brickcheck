@@ -60,12 +60,15 @@ export async function POST(request: NextRequest) {
         const sealedPrices = await priceProvider.getPrices(set.set_number, 'SEALED')
         const usedPrices = await priceProvider.getPrices(set.set_number, 'USED')
 
+        // Determine source from environment
+        const source = process.env.BRICKECONOMY_API_KEY ? 'BRICKECONOMY' : 'BRICKLINK'
+
         // Store latest price snapshots
         const snapshotsToInsert = [
           ...sealedPrices.slice(-1).map((p) => ({
             set_id: setId,
             condition: 'SEALED' as const,
-            source: 'BRICKLINK',
+            source,
             price_cents: p.priceCents,
             currency: p.currency,
             timestamp: p.timestamp,
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest) {
           ...usedPrices.slice(-1).map((p) => ({
             set_id: setId,
             condition: 'USED' as const,
-            source: 'BRICKLINK',
+            source,
             price_cents: p.priceCents,
             currency: p.currency,
             timestamp: p.timestamp,
