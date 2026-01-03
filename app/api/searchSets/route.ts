@@ -43,11 +43,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ results: uniqueResults })
     }
 
-    // If we found results in database, return them
-    if (dbResults && dbResults.length > 0) {
-      return NextResponse.json({ results: dbResults })
-    }
-
     // If no database results, try the catalog provider (Brickset or Mock)
     let results: any[] = []
     try {
