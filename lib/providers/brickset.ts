@@ -5,9 +5,18 @@ import { CatalogProvider, SetMetadata } from './base'
 export class BricksetProvider implements CatalogProvider {
   private apiKey?: string
   private baseUrl = 'https://brickset.com/api/v3.asmx'
+  private userHash?: string
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.BRICKSET_API_KEY
+  }
+
+  private async getUserHash(): Promise<string | null> {
+    // Brickset API requires userHash for most methods
+    // The login method requires username/password, which we don't have
+    // However, some methods might work with just apiKey
+    // For now, we'll try without userHash and handle errors gracefully
+    return null
   }
 
   private async makeRequest(method: string, params: Record<string, string> = {}) {
@@ -15,12 +24,25 @@ export class BricksetProvider implements CatalogProvider {
       throw new Error('Brickset API key not configured. Set BRICKSET_API_KEY environment variable.')
     }
 
-    const url = new URL(this.baseUrl)
+    // Brickset API v3 uses SOAP-style endpoints
+    // Format: https://brickset.com/api/v3.asmx/{method}?apiKey=xxx&userHash=xxx&param1=value1...
+    const url = new URL(`${this.baseUrl}/${method}`)
     url.searchParams.set('apiKey', this.apiKey)
-    url.searchParams.set('method', method)
+    
+    // Add userHash if available (required for most methods)
+    // Note: userHash is obtained via login method, which requires username/password
+    // For public data access, we may need to use a different approach
+    if (this.userHash) {
+      url.searchParams.set('userHash', this.userHash)
+    } else {
+      // Try with empty userHash - some methods might work
+      url.searchParams.set('userHash', '')
+    }
     
     Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.set(key, value)
+      if (value) {
+        url.searchParams.set(key, value)
+      }
     })
 
     try {
@@ -31,12 +53,27 @@ export class BricksetProvider implements CatalogProvider {
         },
       })
 
+      const responseText = await response.text()
+
       if (!response.ok) {
+        console.error('Brickset API error response:', responseText)
+        // If it's a userHash error, log it but don't fail completely
+        if (responseText.includes('userHash')) {
+          throw new Error('Brickset API requires userHash. Some methods may need user authentication via login.')
+        }
         throw new Error(`Brickset API error: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
-      return data
+      // Try to parse as JSON
+      try {
+        const data = JSON.parse(responseText)
+        return data
+      } catch (parseError) {
+        // If not JSON, might be XML (SOAP response)
+        console.warn('Brickset API returned non-JSON response, attempting to extract data')
+        // For now, return empty - we'll need to implement XML parsing if needed
+        throw new Error('Brickset API returned unexpected format. Expected JSON but got: ' + responseText.substring(0, 100))
+      }
     } catch (error) {
       console.error('Brickset API request failed:', error)
       throw error
