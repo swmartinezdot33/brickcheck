@@ -12,12 +12,18 @@ export default function AccountPage() {
   const { data: subscriptionData } = useQuery({
     queryKey: ['subscription-status'],
     queryFn: async () => {
-      const res = await fetch('/api/subscriptions/status')
-      if (!res.ok) return null
-      const data = await res.json()
-      return data.subscription
+      try {
+        const res = await fetch('/api/subscriptions/status')
+        if (!res.ok) return null
+        const data = await res.json()
+        return data.subscription
+      } catch (error) {
+        console.error('Error fetching subscription status:', error)
+        return null
+      }
     },
     staleTime: 5 * 60 * 1000,
+    retry: false, // Don't retry on error to avoid blocking page load
   })
 
   const platform = subscriptionData?.platform || null

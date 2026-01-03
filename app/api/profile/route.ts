@@ -27,6 +27,21 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     if (profileError) {
+      // If table doesn't exist, return empty profile (migrations may not have run)
+      if (profileError.code === '42P01' || profileError.message?.includes('does not exist')) {
+        console.warn('user_profiles table does not exist. Please run migrations.')
+        return NextResponse.json({
+          profile: {
+            id: user.id,
+            email: user.email,
+            display_name: null,
+            avatar_url: null,
+            phone: null,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+          },
+        })
+      }
       console.error('Error fetching profile:', profileError)
       return NextResponse.json({ error: profileError.message }, { status: 500 })
     }
@@ -67,11 +82,22 @@ export async function PATCH(request: NextRequest) {
     const validated = updateProfileSchema.parse(body)
 
     // Check if profile exists
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: checkError } = await supabase
       .from('user_profiles')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
+
+    // If table doesn't exist, return helpful error
+    if (checkError && (checkError.code === '42P01' || checkError.message?.includes('does not exist'))) {
+      return NextResponse.json(
+        { 
+          error: 'Database migrations not run',
+          message: 'Please run database migrations to create the user_profiles table. See docs/ACCOUNT_SETUP.md for instructions.'
+        },
+        { status: 503 }
+      )
+    }
 
     let result
     if (existingProfile) {

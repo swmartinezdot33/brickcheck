@@ -163,11 +163,27 @@ export function ProfileForm() {
   }
 
   if (error) {
+    const isMigrationError = error.message?.includes('migrations') || error.message?.includes('does not exist')
+    
     return (
       <Card>
         <CardContent className="p-12 text-center">
           <p className="text-red-500 mb-2">Error loading profile</p>
-          <p className="text-sm text-muted-foreground">{error.message}</p>
+          <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
+          {isMigrationError && (
+            <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg text-left">
+              <p className="text-sm font-semibold mb-2">Database migrations required</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                The user_profiles table doesn't exist yet. Please run:
+              </p>
+              <code className="text-xs bg-muted p-2 rounded block">
+                supabase db push
+              </code>
+              <p className="text-xs text-muted-foreground mt-2">
+                See docs/ACCOUNT_SETUP.md for detailed instructions.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     )
