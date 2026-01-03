@@ -16,6 +16,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BrickCheck - LEGO Collection Value Tracker",
   description: "Track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts.",
+  metadataBase: new URL('https://www.brickcheck.app'),
+  openGraph: {
+    title: "BrickCheck - LEGO Collection Value Tracker",
+    description: "Track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts.",
+    url: "https://www.brickcheck.app",
+    siteName: "BrickCheck",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BrickCheck - LEGO Collection Value Tracker",
+    description: "Track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts.",
+  },
 };
 
 export default function RootLayout({
