@@ -1,7 +1,7 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 
 // Dynamically import ReactQueryDevtools to avoid hydration mismatch
@@ -15,6 +15,12 @@ const ReactQueryDevtools = dynamic(
 )
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -30,10 +36,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && (
+      {mounted && process.env.NODE_ENV === 'development' && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}
     </QueryClientProvider>
   )
 }
-
