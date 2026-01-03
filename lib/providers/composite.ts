@@ -60,8 +60,12 @@ export class CompositeCatalogProvider implements CatalogProvider {
           }
         }
       } catch (error) {
-        console.error(`[CompositeCatalogProvider] Provider ${provider.constructor.name} failed for search:`, error)
-        console.error(`[CompositeCatalogProvider] Error details:`, error instanceof Error ? error.message : String(error))
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        console.error(`[CompositeCatalogProvider] Provider ${provider.constructor.name} failed for search:`, errorMsg)
+        // If it's a rate limit, log it but continue with other providers
+        if (errorMsg.includes('rate limit') || errorMsg.includes('limit exceeded')) {
+          console.warn(`[CompositeCatalogProvider] ${provider.constructor.name} hit rate limit, trying other providers...`)
+        }
         // Continue with other providers
       }
     }

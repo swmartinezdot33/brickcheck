@@ -65,11 +65,28 @@ export class BricksetProvider implements CatalogProvider {
 
       if (!response.ok) {
         console.error('Brickset API error response:', responseText)
+        // Check for rate limit errors
+        if (responseText.includes('limit exceeded') || responseText.includes('API limit')) {
+          throw new Error('Brickset API rate limit exceeded. Please try again later.')
+        }
         // If it's a userHash error, log it but don't fail completely
         if (responseText.includes('userHash') || responseText.includes('userHash')) {
           throw new Error('Brickset API requires userHash. Some methods may need user authentication via login.')
         }
         throw new Error(`Brickset API error: ${response.status} ${response.statusText}`)
+      }
+
+      // Check for error in JSON response
+      try {
+        const jsonData = JSON.parse(responseText)
+        if (jsonData.status === 'error') {
+          if (jsonData.message && jsonData.message.includes('limit')) {
+            throw new Error('Brickset API rate limit exceeded. Please try again later.')
+          }
+          throw new Error(`Brickset API error: ${jsonData.message || 'Unknown error'}`)
+        }
+      } catch (parseCheckError) {
+        // Not JSON or no error field, continue with normal parsing
       }
 
       // Brickset API v3 returns XML (SOAP), not JSON
@@ -126,6 +143,15 @@ export class BricksetProvider implements CatalogProvider {
       }
       
       console.log(`[BricksetProvider] Found ${data.sets.length} sets`)
+
+      // Check if response indicates an error
+      if (data.status === 'error') {
+        console.error(`[BricksetProvider] API returned error: ${data.message || 'Unknown error'}`)
+        if (data.message && data.message.includes('limit')) {
+          throw new Error('Brickset API rate limit exceeded. Please try again later.')
+        }
+        return []
+      }
 
       return data.sets.map((set: any) => {
         // Handle nested barcode object (EAN/UPC)
