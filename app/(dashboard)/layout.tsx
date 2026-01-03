@@ -17,7 +17,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-red-50/30 via-blue-50/20 to-green-50/30 dark:from-gray-900 dark:via-purple-900/10">
       <Navbar />
       <main className="container mx-auto px-4 py-8">{children}</main>
     </div>

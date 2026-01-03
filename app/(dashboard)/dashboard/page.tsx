@@ -29,17 +29,21 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+          Dashboard
+        </h1>
         <p className="text-muted-foreground">
           Overview of your LEGO collection value and trends
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-lg bg-gradient-lego-blue flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -50,17 +54,19 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today Change</CardTitle>
-            {todayChange >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
-            )}
+            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${todayChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+              {todayChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-white" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-white" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${todayChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`text-2xl font-bold ${todayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {todayChange >= 0 ? '+' : ''}
               {formatCurrency(Math.abs(todayChange))}
             </div>
@@ -71,17 +77,19 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">30-Day Change</CardTitle>
-            {thirtyDayChange >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
-            )}
+            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${thirtyDayChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+              {thirtyDayChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-white" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-white" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${thirtyDayChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`text-2xl font-bold ${thirtyDayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {thirtyDayChange >= 0 ? '+' : ''}
               {formatCurrency(Math.abs(thirtyDayChange))}
             </div>
@@ -92,10 +100,12 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-yellow-50/50 to-transparent dark:from-yellow-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sets</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-lg bg-gradient-lego-yellow flex items-center justify-center">
+              <Package className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalSets || 0}</div>

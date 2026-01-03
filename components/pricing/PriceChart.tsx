@@ -60,7 +60,7 @@ export function PriceChart({ data, condition }: PriceChartProps) {
   }
 
   return (
-    <Card>
+    <Card className="border-2 border-primary/20 bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-950/20">
       <CardHeader>
         <CardTitle>Price History</CardTitle>
         <CardDescription>Last 90 days</CardDescription>

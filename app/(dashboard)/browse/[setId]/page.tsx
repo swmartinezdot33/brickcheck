@@ -70,8 +70,8 @@ export default function BrowseSetDetailPage({
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <h1 className="text-3xl font-bold">{set.name}</h1>
-              {set.retired && <Badge variant="secondary">⭐ Retired</Badge>}
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">{set.name}</h1>
+              {set.retired && <Badge variant="secondary" className="bg-amber-500 hover:bg-amber-600 text-white">⭐ Retired</Badge>}
             </div>
             <p className="text-muted-foreground">
               Set #{set.set_number} • {set.theme || 'Unknown Theme'} • {set.year || 'Unknown Year'}
@@ -90,7 +90,7 @@ export default function BrowseSetDetailPage({
       </div>
 
       {set.image_url && (
-        <Card>
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-yellow-50/30 to-transparent dark:from-yellow-950/20">
           <CardContent className="p-6">
             <div className="max-w-md mx-auto">
               <img
@@ -113,7 +113,7 @@ export default function BrowseSetDetailPage({
           {pricing.sealed ? (
             <>
               <div className="grid gap-4 md:grid-cols-3">
-                <Card>
+                <Card className="border-2 border-primary/20 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Estimated Value</CardTitle>
                   </CardHeader>
@@ -127,18 +127,20 @@ export default function BrowseSetDetailPage({
                   </CardContent>
                 </Card>
                 {pricing.trends.sealed['7d'] && (
-                  <Card>
+                  <Card className={`border-2 border-primary/20 bg-gradient-to-br ${pricing.trends.sealed['7d'].percentChange >= 0 ? 'from-green-50/50 dark:from-green-950/20' : 'from-red-50/50 dark:from-red-950/20'} to-transparent`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">7-Day Change</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
-                        {pricing.trends.sealed['7d'].percentChange >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-red-500" />
-                        )}
-                        <div className="text-2xl font-bold">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${pricing.trends.sealed['7d'].percentChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+                          {pricing.trends.sealed['7d'].percentChange >= 0 ? (
+                            <TrendingUp className="h-4 w-4 text-white" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className={`text-2xl font-bold ${pricing.trends.sealed['7d'].percentChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {pricing.trends.sealed['7d'].percentChange >= 0 ? '+' : ''}
                           {pricing.trends.sealed['7d'].percentChange.toFixed(1)}%
                         </div>
@@ -147,18 +149,20 @@ export default function BrowseSetDetailPage({
                   </Card>
                 )}
                 {pricing.trends.sealed['30d'] && (
-                  <Card>
+                  <Card className={`border-2 border-primary/20 bg-gradient-to-br ${pricing.trends.sealed['30d'].percentChange >= 0 ? 'from-green-50/50 dark:from-green-950/20' : 'from-red-50/50 dark:from-red-950/20'} to-transparent`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">30-Day Change</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
-                        {pricing.trends.sealed['30d'].percentChange >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-red-500" />
-                        )}
-                        <div className="text-2xl font-bold">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${pricing.trends.sealed['30d'].percentChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+                          {pricing.trends.sealed['30d'].percentChange >= 0 ? (
+                            <TrendingUp className="h-4 w-4 text-white" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className={`text-2xl font-bold ${pricing.trends.sealed['30d'].percentChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {pricing.trends.sealed['30d'].percentChange >= 0 ? '+' : ''}
                           {pricing.trends.sealed['30d'].percentChange.toFixed(1)}%
                         </div>
@@ -185,7 +189,7 @@ export default function BrowseSetDetailPage({
           {pricing.used ? (
             <>
               <div className="grid gap-4 md:grid-cols-3">
-                <Card>
+                <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-950/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Estimated Value</CardTitle>
                   </CardHeader>
@@ -199,18 +203,20 @@ export default function BrowseSetDetailPage({
                   </CardContent>
                 </Card>
                 {pricing.trends.used['7d'] && (
-                  <Card>
+                  <Card className={`border-2 border-primary/20 bg-gradient-to-br ${pricing.trends.used['7d'].percentChange >= 0 ? 'from-green-50/50 dark:from-green-950/20' : 'from-red-50/50 dark:from-red-950/20'} to-transparent`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">7-Day Change</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
-                        {pricing.trends.used['7d'].percentChange >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-red-500" />
-                        )}
-                        <div className="text-2xl font-bold">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${pricing.trends.used['7d'].percentChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+                          {pricing.trends.used['7d'].percentChange >= 0 ? (
+                            <TrendingUp className="h-4 w-4 text-white" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className={`text-2xl font-bold ${pricing.trends.used['7d'].percentChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {pricing.trends.used['7d'].percentChange >= 0 ? '+' : ''}
                           {pricing.trends.used['7d'].percentChange.toFixed(1)}%
                         </div>
@@ -219,18 +225,20 @@ export default function BrowseSetDetailPage({
                   </Card>
                 )}
                 {pricing.trends.used['30d'] && (
-                  <Card>
+                  <Card className={`border-2 border-primary/20 bg-gradient-to-br ${pricing.trends.used['30d'].percentChange >= 0 ? 'from-green-50/50 dark:from-green-950/20' : 'from-red-50/50 dark:from-red-950/20'} to-transparent`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">30-Day Change</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
-                        {pricing.trends.used['30d'].percentChange >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-red-500" />
-                        )}
-                        <div className="text-2xl font-bold">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${pricing.trends.used['30d'].percentChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+                          {pricing.trends.used['30d'].percentChange >= 0 ? (
+                            <TrendingUp className="h-4 w-4 text-white" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className={`text-2xl font-bold ${pricing.trends.used['30d'].percentChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {pricing.trends.used['30d'].percentChange >= 0 ? '+' : ''}
                           {pricing.trends.used['30d'].percentChange.toFixed(1)}%
                         </div>

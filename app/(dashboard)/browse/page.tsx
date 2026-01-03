@@ -36,11 +36,13 @@ export default function BrowsePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Browse Sets</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+          Browse Sets
+        </h1>
         <p className="text-muted-foreground">Search and explore LEGO sets, view details, and add to your collection</p>
       </div>
 
-      <Card>
+      <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/30 to-transparent dark:from-purple-950/20">
         <CardHeader>
           <CardTitle>Search LEGO Sets</CardTitle>
           <CardDescription>
@@ -108,7 +110,7 @@ export default function BrowsePage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {data.map((set) => (
-              <Card key={set.id || set.set_number} className="hover:shadow-lg transition-shadow">
+              <Card key={set.id || set.set_number} className="hover:shadow-lg transition-shadow border-2 border-primary/10 hover:border-primary/30">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">

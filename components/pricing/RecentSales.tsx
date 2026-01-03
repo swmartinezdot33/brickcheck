@@ -29,7 +29,7 @@ export function RecentSales({ snapshots, condition }: RecentSalesProps) {
 
   if (filteredSnapshots.length === 0) {
     return (
-      <Card>
+      <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/30 to-transparent dark:from-purple-950/20">
         <CardHeader>
           <CardTitle>Recent Sales</CardTitle>
           <CardDescription>No recent sales data available for {condition.toLowerCase()} condition</CardDescription>
@@ -52,7 +52,7 @@ export function RecentSales({ snapshots, condition }: RecentSalesProps) {
     : 0
 
   return (
-    <Card>
+    <Card className="border-2 border-primary/20 bg-gradient-to-br from-purple-50/30 to-transparent dark:from-purple-950/20">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>

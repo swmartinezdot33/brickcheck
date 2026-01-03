@@ -72,11 +72,12 @@ export function BarcodeScanner({
         throw new Error('Camera permission denied. Please allow camera access and try again.')
       }
 
-      // Configure hints for QR code detection only (not barcodes)
+      // Configure hints for QR code and Data Matrix detection
       const hints = new Map()
-      // Only enable QR code format - disable all barcode formats
+      // Enable QR_CODE and DATA_MATRIX
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.QR_CODE,
+        BarcodeFormat.DATA_MATRIX,
       ])
       hints.set(DecodeHintType.TRY_HARDER, true)
 

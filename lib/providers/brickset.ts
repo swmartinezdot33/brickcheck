@@ -39,11 +39,17 @@ export class BricksetProvider implements CatalogProvider {
       url.searchParams.set('userHash', '')
     }
     
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) {
-        url.searchParams.set(key, value)
-      }
-    })
+    // For getSets, we need to pass a JSON string in the 'params' query parameter
+    if (method === 'getSets') {
+      url.searchParams.set('params', JSON.stringify(params))
+    } else {
+      // For other methods, parameters might be direct
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, value)
+        }
+      })
+    }
 
     try {
       const response = await fetch(url.toString(), {
@@ -121,19 +127,39 @@ export class BricksetProvider implements CatalogProvider {
       
       console.log(`[BricksetProvider] Found ${data.sets.length} sets`)
 
-      return data.sets.map((set: any) => ({
-        setNumber: set.number || '',
-        name: set.name || '',
-        theme: set.theme || undefined,
-        year: set.year ? parseInt(set.year) : undefined,
-        pieceCount: set.pieces ? parseInt(set.pieces) : undefined,
-        msrpCents: set.USRetailPrice ? Math.round(parseFloat(set.USRetailPrice) * 100) : undefined,
-        imageUrl: set.imageURL || undefined,
-        retired: set.retired === 'true' || set.retired === true,
-        bricksetId: set.setID?.toString() || undefined,
-        bricklinkId: undefined, // Brickset doesn't provide BrickLink IDs directly
-        gtin: set.barcode || set.EAN || undefined,
-      }))
+      return data.sets.map((set: any) => {
+        // Handle nested barcode object (EAN/UPC)
+        let gtin: string | undefined = undefined
+        if (set.barcode) {
+          if (typeof set.barcode === 'string') gtin = set.barcode
+          else if (typeof set.barcode === 'object') gtin = set.barcode.EAN || set.barcode.UPC
+        } else {
+          gtin = set.EAN || set.UPC
+        }
+
+        // Determine retired status
+        let retired = false
+        if (set.retired !== undefined) {
+          retired = set.retired === 'true' || set.retired === true
+        } else if (set.exitDate) {
+          // If exit date is in the past, it's retired
+          retired = new Date(set.exitDate) < new Date()
+        }
+
+        return {
+          setNumber: set.number || '',
+          name: set.name || '',
+          theme: set.theme || undefined,
+          year: set.year ? parseInt(set.year) : undefined,
+          pieceCount: set.pieces ? parseInt(set.pieces) : undefined,
+          msrpCents: set.USRetailPrice ? Math.round(parseFloat(set.USRetailPrice) * 100) : undefined,
+          imageUrl: set.imageURL || undefined,
+          retired: retired,
+          bricksetId: set.setID?.toString() || undefined,
+          bricklinkId: undefined, // Brickset doesn't provide BrickLink IDs directly
+          gtin: gtin,
+        }
+      })
     } catch (error) {
       console.error('Error searching Brickset:', error)
       // Return empty array on error rather than throwing
@@ -152,6 +178,25 @@ export class BricksetProvider implements CatalogProvider {
       }
 
       const set = data.sets[0]
+
+      // Handle nested barcode object (EAN/UPC)
+      let gtin: string | undefined = undefined
+      if (set.barcode) {
+        if (typeof set.barcode === 'string') gtin = set.barcode
+        else if (typeof set.barcode === 'object') gtin = set.barcode.EAN || set.barcode.UPC
+      } else {
+        gtin = set.EAN || set.UPC
+      }
+
+      // Determine retired status
+      let retired = false
+      if (set.retired !== undefined) {
+        retired = set.retired === 'true' || set.retired === true
+      } else if (set.exitDate) {
+        // If exit date is in the past, it's retired
+        retired = new Date(set.exitDate) < new Date()
+      }
+
       return {
         setNumber: set.number || setNumber,
         name: set.name || '',
@@ -160,10 +205,10 @@ export class BricksetProvider implements CatalogProvider {
         pieceCount: set.pieces ? parseInt(set.pieces) : undefined,
         msrpCents: set.USRetailPrice ? Math.round(parseFloat(set.USRetailPrice) * 100) : undefined,
         imageUrl: set.imageURL || undefined,
-        retired: set.retired === 'true' || set.retired === true,
+        retired: retired,
         bricksetId: set.setID?.toString() || undefined,
         bricklinkId: undefined,
-        gtin: set.barcode || set.EAN || undefined,
+        gtin: gtin,
       }
     } catch (error) {
       console.error('Error fetching set from Brickset:', error)
@@ -183,6 +228,25 @@ export class BricksetProvider implements CatalogProvider {
       }
 
       const set = data.sets[0]
+
+      // Handle nested barcode object (EAN/UPC)
+      let gtinVal: string | undefined = undefined
+      if (set.barcode) {
+        if (typeof set.barcode === 'string') gtinVal = set.barcode
+        else if (typeof set.barcode === 'object') gtinVal = set.barcode.EAN || set.barcode.UPC
+      } else {
+        gtinVal = set.EAN || set.UPC
+      }
+
+      // Determine retired status
+      let retired = false
+      if (set.retired !== undefined) {
+        retired = set.retired === 'true' || set.retired === true
+      } else if (set.exitDate) {
+        // If exit date is in the past, it's retired
+        retired = new Date(set.exitDate) < new Date()
+      }
+
       return {
         setNumber: set.number || '',
         name: set.name || '',
@@ -191,10 +255,10 @@ export class BricksetProvider implements CatalogProvider {
         pieceCount: set.pieces ? parseInt(set.pieces) : undefined,
         msrpCents: set.USRetailPrice ? Math.round(parseFloat(set.USRetailPrice) * 100) : undefined,
         imageUrl: set.imageURL || undefined,
-        retired: set.retired === 'true' || set.retired === true,
+        retired: retired,
         bricksetId: set.setID?.toString() || undefined,
         bricklinkId: undefined,
-        gtin: set.barcode || set.EAN || gtin,
+        gtin: gtinVal || gtin,
       }
     } catch (error) {
       console.error('Error fetching set by GTIN from Brickset:', error)

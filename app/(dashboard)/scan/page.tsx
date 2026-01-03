@@ -10,7 +10,9 @@ export default function ScanPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Scan Barcode</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+          Scan Barcode
+        </h1>
         <p className="text-muted-foreground">
           Scan a LEGO box barcode to identify and add sets to your collection
         </p>

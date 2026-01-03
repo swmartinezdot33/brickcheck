@@ -17,7 +17,9 @@ export default function CollectionPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">My Collection</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+          My Collection
+        </h1>
         <p className="text-muted-foreground">Manage your LEGO sets</p>
       </div>
 
@@ -28,7 +30,7 @@ export default function CollectionPage() {
         </TabsList>
 
         <TabsContent value="search" className="space-y-4">
-          <Card>
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-950/20">
             <CardHeader>
               <CardTitle>Search for Sets</CardTitle>
               <CardDescription>
@@ -42,7 +44,7 @@ export default function CollectionPage() {
         </TabsContent>
 
         <TabsContent value="collection" className="space-y-4">
-          <Card>
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/20">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
