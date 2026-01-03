@@ -52,7 +52,6 @@ export function AddItemModal({ open, onOpenChange, set }: AddItemModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] })
       queryClient.invalidateQueries({ queryKey: ['collection-stats'] })
-      onOpenChange(false)
       // Reset form
       setCondition('SEALED')
       setConditionGrade('')
@@ -60,12 +59,23 @@ export function AddItemModal({ open, onOpenChange, set }: AddItemModalProps) {
       setAcquisitionCost('')
       setAcquisitionDate('')
       setNotes('')
+      // Close modal
+      onOpenChange(false)
     },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!set) return
+    if (!set || !set.id) {
+      console.error('Set or set.id is missing:', set)
+      return
+    }
+
+    console.log('Submitting collection item:', {
+      set_id: set.id,
+      condition,
+      quantity,
+    })
 
     mutation.mutate({
       set_id: set.id,

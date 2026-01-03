@@ -26,6 +26,7 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
   })
 
   const handleSelect = (set: Set) => {
+    console.log('Set selected:', set)
     setSelectedSet(set)
     setModalOpen(true)
     if (onSelect) {
@@ -51,9 +52,12 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
               <CommandGroup heading="Results">
                 {data.map((set) => (
                   <CommandItem
-                    key={set.id}
-                    value={set.set_number}
-                    onSelect={() => handleSelect(set)}
+                    key={set.id || set.set_number}
+                    value={`${set.set_number}-${set.name}`}
+                    onSelect={() => {
+                      console.log('CommandItem selected:', set)
+                      handleSelect(set)
+                    }}
                     className="cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
@@ -72,7 +76,17 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
         </Command>
       </div>
       {selectedSet && (
-        <AddItemModal open={modalOpen} onOpenChange={setModalOpen} set={selectedSet} />
+        <AddItemModal
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open)
+            if (!open) {
+              setSelectedSet(null)
+              setQuery('') // Clear search after adding
+            }
+          }}
+          set={selectedSet}
+        />
       )}
     </>
   )

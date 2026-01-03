@@ -31,26 +31,34 @@ export async function GET(request: NextRequest) {
       bricklink_id: set.bricklinkId || null,
     }))
 
-    // Upsert sets
+    // Upsert sets and get back the database records
+    let dbSets: any[] = []
     if (setsToInsert.length > 0) {
-      const { error } = await supabase.from('sets').upsert(setsToInsert, {
-        onConflict: 'set_number',
-        ignoreDuplicates: false,
-      })
+      const { data: upsertedSets, error } = await supabase
+        .from('sets')
+        .upsert(setsToInsert, {
+          onConflict: 'set_number',
+          ignoreDuplicates: false,
+        })
+        .select()
 
       if (error) {
         console.error('Error upserting sets:', error)
+        // If upsert fails, try to fetch existing sets
+        const setNumbers = setsToInsert.map((s) => s.set_number)
+        const { data: existingSets } = await supabase
+          .from('sets')
+          .select('*')
+          .in('set_number', setNumbers)
+        dbSets = existingSets || []
+      } else {
+        dbSets = upsertedSets || []
       }
 
       // Upsert GTINs if available
       for (const set of results) {
         if (set.gtin) {
-          const { data: setData } = await supabase
-            .from('sets')
-            .select('id')
-            .eq('set_number', set.setNumber)
-            .single()
-
+          const setData = dbSets.find((s) => s.set_number === set.setNumber)
           if (setData) {
             await supabase.from('set_identifiers').upsert(
               {
@@ -69,7 +77,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ results })
+    // Return database records (with IDs) instead of mock data
+    return NextResponse.json({ results: dbSets })
   } catch (error) {
     console.error('Error searching sets:', error)
     return NextResponse.json(
