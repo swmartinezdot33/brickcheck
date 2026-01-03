@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -18,20 +17,13 @@ interface DownloadModalProps {
 }
 
 export function DownloadModal({ open = false, onOpenChange, trigger }: DownloadModalProps) {
-  const [isOpen, setIsOpen] = useState(open)
-
-  const handleOpenChange = (newOpen: boolean) => {
-    setIsOpen(newOpen)
-    onOpenChange?.(newOpen)
-  }
-
   const appStoreUrl = 'https://apps.apple.com/app/brickcheck'
   const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.brickcheck.app'
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && (
-        <div onClick={() => handleOpenChange(true)}>
+        <div onClick={() => onOpenChange?.(true)}>
           {trigger}
         </div>
       )}
