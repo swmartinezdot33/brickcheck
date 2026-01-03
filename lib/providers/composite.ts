@@ -12,6 +12,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   constructor() {
     // Add all available providers
+    // Prioritize BrickEconomy (better rate limits) over Brickset (100/day limit)
     if (process.env.BRICKECONOMY_API_KEY) {
       this.providers.push(new BrickEconomyProvider(process.env.BRICKECONOMY_API_KEY))
     }
