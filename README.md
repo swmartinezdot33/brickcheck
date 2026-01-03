@@ -135,11 +135,11 @@ The cron job will automatically refresh prices for all sets in user collections.
 - ✅ **Milestone A**: Project scaffolding + Auth + Base UI
 - ✅ **Milestone B**: Set search + Add to collection
 - ✅ **Milestone C**: Barcode scan flow
-- ⏳ **Milestone D**: Brickset integration (placeholder ready)
-- ✅ **Milestone E**: BrickLink integration structure (using mocks)
+- ✅ **Milestone D**: Brickset API integration (API key configured, waiting on userHash)
+- ✅ **Milestone E**: BrickLink API integration (fully operational with real data)
 - ✅ **Milestone F**: Pricing engine + Charts
 - ✅ **Milestone G**: Alerts + Cron refresh
-- ⏳ **Milestone H**: Mobile packaging (Capacitor/Expo)
+- ⏳ **Milestone H**: Mobile packaging (Future phase - web app is PWA-ready)
 
 ## Phase Roadmap
 

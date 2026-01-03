@@ -22,11 +22,13 @@
 - ✅ `/api/scanLookup` endpoint
 - ✅ Scan result display with add-to-collection flow
 
-### Milestone E: BrickLink Integration Structure
+### Milestone E: BrickLink Integration
 - ✅ Price provider interface
 - ✅ `/api/price/refresh` endpoint
 - ✅ Price snapshot storage
-- ✅ Mock price provider for development
+- ✅ Real BrickLink API integration with OAuth 1.0a
+- ✅ All credentials configured in Vercel
+- ✅ Using real BrickLink API for pricing data
 
 ### Milestone F: Pricing Engine + Charts
 - ✅ Pricing algorithm (median, trimmed mean, confidence scores)
@@ -48,12 +50,12 @@
 - ✅ Environment variables configured in Vercel
 - ✅ Production deployment successful
 
-## ⏳ Pending (Future Phases)
-
 ### Milestone D: Brickset API Integration
-- ⏳ Real Brickset API integration (structure ready, needs API key)
-- ⏳ Caching and rate limiting implementation
-- **Status**: Placeholder ready, can be implemented when API key is available
+- ✅ Brickset API integration code implemented
+- ✅ API key configured (`3-wQGU-xXrU-Ej46o`)
+- ✅ Provider factory with automatic fallback
+- ⚠️ Requires userHash from login method for full functionality (waiting on Brickset credentials)
+- **Status**: Integration ready, using mock data as fallback until userHash is available
 
 ### Milestone H: Mobile Packaging
 - ⏳ Evaluate Capacitor vs Expo
@@ -72,29 +74,35 @@
 - ✅ Alert system
 - ✅ Automated nightly price refresh
 
-### What Needs Real API Keys
-- ⚠️ Brickset API: For real set metadata (currently using mocks)
-- ⚠️ BrickLink API: For real pricing data (currently using mocks)
+### API Integration Status
+- ✅ BrickLink API: Fully integrated with real credentials, using live pricing data
+- ⚠️ Brickset API: Integration ready, API key configured, waiting on userHash for full functionality (using mock fallback)
 
-### Next Steps to Go Live
+### API Credentials Status
 1. ✅ **DONE**: Supabase project created and linked
 2. ✅ **DONE**: Migrations applied
-3. ✅ **DONE**: Environment variables added to Vercel
+3. ✅ **DONE**: All environment variables added to Vercel
 4. ✅ **DONE**: Production deployment successful
-5. ⏳ **WAITING**: Supabase project to finish provisioning (usually 2-3 minutes)
-6. ⏳ **OPTIONAL**: Seed database with sample data (once project is ready)
-7. ⏳ **OPTIONAL**: Add Brickset/BrickLink API keys for real data
+5. ✅ **DONE**: BrickLink API credentials configured and active
+6. ✅ **DONE**: Brickset API key configured (waiting on userHash for full functionality)
+7. ✅ **DONE**: Domain configured: www.brickcheck.app
 
-## 🎉 MVP Status: **COMPLETE**
+## 🎉 MVP Status: **COMPLETE & LIVE**
 
-The MVP is fully functional and deployed! The app works with mock data and is ready for:
-- User signup/login
-- Collection management
-- Set search and barcode scanning
-- Price tracking (with mock data)
-- Alerts system
+The MVP is fully functional and deployed with real API integrations! The app is ready for:
+- ✅ User signup/login
+- ✅ Collection management
+- ✅ Set search and barcode scanning
+- ✅ Price tracking (using real BrickLink API)
+- ✅ Alerts system
+- ✅ Retired set identification and filtering
+- ✅ Automated nightly price refresh
 
-To enable real data, simply add API keys for Brickset and BrickLink when available.
+**Live at**: https://www.brickcheck.app
+
+### Current Data Sources
+- **BrickLink**: ✅ Fully integrated, using real pricing data
+- **Brickset**: ⚠️ Integration ready, API key configured, using mock fallback until userHash is available
 
 ## 📊 Deployment URLs
 
