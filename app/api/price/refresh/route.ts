@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { MockPriceProvider } from '@/lib/providers/mock'
+import { getPriceProvider } from '@/lib/providers'
 
-const priceProvider = new MockPriceProvider()
+const priceProvider = getPriceProvider()
 
 export async function POST(request: NextRequest) {
   try {

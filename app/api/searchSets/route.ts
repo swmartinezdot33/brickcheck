@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { MockCatalogProvider } from '@/lib/providers/mock'
+import { getCatalogProvider } from '@/lib/providers'
 
-const catalogProvider = new MockCatalogProvider()
+const catalogProvider = getCatalogProvider()
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

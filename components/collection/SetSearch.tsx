@@ -44,12 +44,26 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
             onValueChange={setQuery}
           />
           <CommandList>
-            {isLoading && <div className="p-4 text-sm text-muted-foreground">Searching...</div>}
-            {!isLoading && (!data || data.length === 0) && query.length >= 2 && (
-              <CommandEmpty>No sets found.</CommandEmpty>
+            {isLoading && (
+              <div className="p-4 text-sm text-muted-foreground text-center">Searching...</div>
+            )}
+            {!isLoading && query.length >= 2 && (!data || data.length === 0) && (
+              <CommandEmpty>
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground">No sets found.</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Try: 75192, Millennium, Titanic, or Disney
+                  </p>
+                </div>
+              </CommandEmpty>
+            )}
+            {!isLoading && query.length < 2 && (
+              <div className="p-4 text-sm text-muted-foreground text-center">
+                Type at least 2 characters to search...
+              </div>
             )}
             {data && data.length > 0 && (
-              <CommandGroup heading="Results">
+              <CommandGroup heading={`${data.length} result${data.length > 1 ? 's' : ''} found`}>
                 {data.map((set) => (
                   <CommandItem
                     key={set.id || set.set_number}
@@ -60,11 +74,16 @@ export function SetSearch({ onSelect }: { onSelect?: (set: Set) => void }) {
                     }}
                     className="cursor-pointer"
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <div>
+                    <div className="flex items-center justify-between w-full py-1">
+                      <div className="flex-1">
                         <div className="font-medium">{set.name}</div>
                         <div className="text-sm text-muted-foreground">
                           #{set.set_number} • {set.theme || 'Unknown'} • {set.year || 'Unknown'}
+                          {set.retired && (
+                            <span className="ml-2 text-xs bg-yellow-100 dark:bg-yellow-900 px-1.5 py-0.5 rounded">
+                              Retired
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

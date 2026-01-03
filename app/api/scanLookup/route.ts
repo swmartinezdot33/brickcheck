@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { MockCatalogProvider } from '@/lib/providers/mock'
+import { getCatalogProvider } from '@/lib/providers'
 
-const catalogProvider = new MockCatalogProvider()
+const catalogProvider = getCatalogProvider()
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -15,22 +15,31 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    // First, check database for existing mapping
+    // Clean the GTIN (remove spaces, ensure it's numeric)
+    const cleanGtin = gtin.replace(/\s+/g, '').trim()
+
+    // First, check database for existing mapping (try both original and cleaned)
     const { data: identifier } = await supabase
       .from('set_identifiers')
       .select('set_id, sets(*)')
-      .eq('identifier_value', gtin)
-      .single()
+      .or(`identifier_value.eq.${gtin},identifier_value.eq.${cleanGtin}`)
+      .maybeSingle()
 
     if (identifier && identifier.sets) {
       return NextResponse.json({ set: identifier.sets })
     }
 
     // If not found, try provider lookup
-    const setMetadata = await catalogProvider.getSetByGTIN(gtin)
+    const setMetadata = await catalogProvider.getSetByGTIN(cleanGtin)
+    
+    // If still not found with cleaned GTIN, try original
+    const finalMetadata = setMetadata || await catalogProvider.getSetByGTIN(gtin)
 
-    if (!setMetadata) {
-      return NextResponse.json({ error: 'Set not found for this barcode' }, { status: 404 })
+    if (!finalMetadata) {
+      return NextResponse.json({ 
+        error: 'Set not found for this barcode',
+        message: `No LEGO set found for barcode: ${cleanGtin}. Try searching manually or check if the barcode is correct.`
+      }, { status: 404 })
     }
 
     // Upsert set into database
@@ -38,16 +47,16 @@ export async function GET(request: NextRequest) {
       .from('sets')
       .upsert(
         {
-          set_number: setMetadata.setNumber,
-          name: setMetadata.name,
-          theme: setMetadata.theme || null,
-          year: setMetadata.year || null,
-          piece_count: setMetadata.pieceCount || null,
-          msrp_cents: setMetadata.msrpCents || null,
-          image_url: setMetadata.imageUrl || null,
-          retired: setMetadata.retired || false,
-          brickset_id: setMetadata.bricksetId || null,
-          bricklink_id: setMetadata.bricklinkId || null,
+          set_number: finalMetadata.setNumber,
+          name: finalMetadata.name,
+          theme: finalMetadata.theme || null,
+          year: finalMetadata.year || null,
+          piece_count: finalMetadata.pieceCount || null,
+          msrp_cents: finalMetadata.msrpCents || null,
+          image_url: finalMetadata.imageUrl || null,
+          retired: finalMetadata.retired || false,
+          brickset_id: finalMetadata.bricksetId || null,
+          bricklink_id: finalMetadata.bricklinkId || null,
         },
         {
           onConflict: 'set_number',
@@ -60,19 +69,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save set' }, { status: 500 })
     }
 
-    // Save GTIN mapping
-    if (setMetadata.gtin) {
-      await supabase.from('set_identifiers').upsert(
-        {
-          set_id: setData.id,
-          identifier_type: 'GTIN',
-          identifier_value: setMetadata.gtin,
-          source: 'BRICKSET',
-        },
-        {
-          onConflict: 'identifier_value',
-        }
-      )
+    // Save GTIN mapping (use cleaned GTIN and original)
+    const gtinToSave = finalMetadata.gtin || cleanGtin
+    if (gtinToSave) {
+      // Save both cleaned and original if different
+      const identifiers = [gtinToSave]
+      if (gtin !== cleanGtin && gtin !== gtinToSave) {
+        identifiers.push(gtin)
+      }
+
+      for (const identifierValue of identifiers) {
+        await supabase.from('set_identifiers').upsert(
+          {
+            set_id: setData.id,
+            identifier_type: 'GTIN',
+            identifier_value: identifierValue,
+            source: 'BRICKSET',
+          },
+          {
+            onConflict: 'identifier_value',
+          }
+        )
+      }
     }
 
     return NextResponse.json({ set: setData })

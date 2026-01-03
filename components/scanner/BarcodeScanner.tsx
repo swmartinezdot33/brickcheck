@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BrowserMultiFormatReader } from '@zxing/library'
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Camera, CameraOff, Loader2 } from 'lucide-react'
@@ -72,24 +72,65 @@ export function BarcodeScanner({
         throw new Error('Camera permission denied. Please allow camera access and try again.')
       }
 
-      // Start decoding from video device
+      // Configure hints for better barcode detection
+      const hints = new Map()
+      // Enable common barcode formats: UPC-A, EAN-13, Code 128, etc.
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+      ])
+      hints.set(DecodeHintType.TRY_HARDER, true)
+      hints.set(DecodeHintType.ASSUME_GS1, false)
+
+      codeReader.hints = hints
+
+      let lastDetectedCode = ''
+      let detectionCount = 0
+      const REQUIRED_DETECTIONS = 2 // Require 2 detections of same code to confirm
+
+      // Start continuous decoding
       codeReader.decodeFromVideoDevice(
         selectedDeviceId,
         videoRef.current,
         (result, err) => {
           if (result) {
-            const code = result.getText()
-            console.log('Barcode scanned:', code)
-            onScan(code)
-            stopScanning()
+            const code = result.getText().trim()
+            // Clean up the code (remove spaces, validate)
+            const cleanCode = code.replace(/\s+/g, '')
+            
+            // Validate barcode length (UPC-A is 12 digits, EAN-13 is 13, etc.)
+            if (cleanCode && /^\d{8,13}$/.test(cleanCode)) {
+              if (cleanCode === lastDetectedCode) {
+                detectionCount++
+                // Only process after multiple confirmations to avoid false positives
+                if (detectionCount >= REQUIRED_DETECTIONS) {
+                  console.log('Barcode confirmed:', cleanCode)
+                  stopScanning()
+                  onScan(cleanCode)
+                }
+              } else {
+                // New code detected, reset counter
+                lastDetectedCode = cleanCode
+                detectionCount = 1
+              }
+            }
           }
           if (err) {
-            // Only log actual errors, not scanning attempts
+            // Silently ignore NotFoundException - it's normal when scanning
             if (
               err.name !== 'NotFoundException' &&
-              !err.message?.includes('No MultiFormat Readers')
+              err.name !== 'NoBarcodeDetectedException' &&
+              !err.message?.includes('No MultiFormat Readers') &&
+              !err.message?.includes('No barcode detected')
             ) {
-              console.debug('Scanning...', err)
+              // Only log occasionally to avoid console spam
+              if (Math.random() < 0.01) {
+                console.debug('Scanning...', err.name)
+              }
             }
           }
         }
@@ -105,6 +146,11 @@ export function BarcodeScanner({
   }
 
   const stopScanning = () => {
+    // Clear any scanning intervals
+    if (codeReaderRef.current && (codeReaderRef.current as any).scanInterval) {
+      clearInterval((codeReaderRef.current as any).scanInterval)
+    }
+
     if (codeReaderRef.current) {
       codeReaderRef.current.reset()
       codeReaderRef.current = null
