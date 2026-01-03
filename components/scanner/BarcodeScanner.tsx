@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
+import { BrowserQRCodeReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Camera, CameraOff, Loader2 } from 'lucide-react'
@@ -16,7 +16,7 @@ export function BarcodeScanner({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
 
   useEffect(() => {
     return () => {
@@ -37,7 +37,7 @@ export function BarcodeScanner({
         throw new Error('Camera access requires HTTPS. Please use the production URL.')
       }
 
-      const codeReader = new BrowserMultiFormatReader()
+      const codeReader = new BrowserQRCodeReader()
       codeReaderRef.current = codeReader
 
       // Get available video input devices
@@ -72,16 +72,7 @@ export function BarcodeScanner({
         throw new Error('Camera permission denied. Please allow camera access and try again.')
       }
 
-      // Configure hints for QR code and Data Matrix detection
-      const hints = new Map()
-      // Enable QR_CODE and DATA_MATRIX
-      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.QR_CODE,
-        BarcodeFormat.DATA_MATRIX,
-      ])
-      hints.set(DecodeHintType.TRY_HARDER, true)
-
-      codeReader.hints = hints
+      // BrowserQRCodeReader only scans QR codes, so no need for format hints
 
       let lastDetectedCode = ''
       let detectionCount = 0
@@ -93,25 +84,32 @@ export function BarcodeScanner({
         videoRef.current,
         (result, err) => {
           if (result) {
-            const code = result.getText().trim()
-            // Clean up the code (remove spaces, validate)
-            const cleanCode = code.replace(/\s+/g, '')
-            
-            // QR codes can contain any text, so we accept any non-empty code
-            if (cleanCode && cleanCode.length > 0) {
-              if (cleanCode === lastDetectedCode) {
-                detectionCount++
-                // Only process after multiple confirmations to avoid false positives
-                if (detectionCount >= REQUIRED_DETECTIONS) {
-                  console.log('Barcode confirmed:', cleanCode)
-                  stopScanning()
-                  onScan(cleanCode)
+            // Verify it's actually a QR code (BrowserQRCodeReader should only return QR codes, but double-check)
+            const format = result.getBarcodeFormat()
+            if (format === BarcodeFormat.QR_CODE) {
+              const code = result.getText().trim()
+              // Clean up the code (remove spaces, validate)
+              const cleanCode = code.replace(/\s+/g, '')
+              
+              // QR codes can contain any text, so we accept any non-empty code
+              if (cleanCode && cleanCode.length > 0) {
+                if (cleanCode === lastDetectedCode) {
+                  detectionCount++
+                  // Only process after multiple confirmations to avoid false positives
+                  if (detectionCount >= REQUIRED_DETECTIONS) {
+                    console.log('QR code confirmed:', cleanCode)
+                    stopScanning()
+                    onScan(cleanCode)
+                  }
+                } else {
+                  // New code detected, reset counter
+                  lastDetectedCode = cleanCode
+                  detectionCount = 1
                 }
-              } else {
-                // New code detected, reset counter
-                lastDetectedCode = cleanCode
-                detectionCount = 1
               }
+            } else {
+              // Ignore non-QR codes (shouldn't happen with BrowserQRCodeReader, but just in case)
+              console.debug('Ignoring non-QR code format:', format)
             }
           }
           if (err) {
@@ -165,7 +163,7 @@ export function BarcodeScanner({
     <Card>
       <CardHeader>
         <CardTitle>Barcode Scanner</CardTitle>
-        <CardDescription>Point your camera at a QR code</CardDescription>
+        <CardDescription>Point your camera at a QR code (linear barcodes are ignored)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
@@ -204,8 +202,8 @@ export function BarcodeScanner({
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Make sure to allow camera access when prompted. The scanner will automatically detect
-          QR codes.
+          Make sure to allow camera access when prompted. The scanner will only detect
+          QR codes (linear barcodes are ignored).
         </p>
       </CardContent>
     </Card>

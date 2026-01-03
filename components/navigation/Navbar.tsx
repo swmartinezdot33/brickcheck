@@ -54,11 +54,11 @@ export function Navbar() {
                 Scan
               </Link>
               <Link
-                href="/settings"
+                href="/account"
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-md transition-all"
               >
                 <Settings className="h-4 w-4" />
-                Settings
+                Account
               </Link>
             </div>
           </div>
