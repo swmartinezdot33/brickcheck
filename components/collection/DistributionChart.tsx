@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils'
 interface DataPoint {
   name: string
   value: number
+  [key: string]: any // Allow additional properties for Recharts compatibility
 }
 
 interface DistributionChartProps {
