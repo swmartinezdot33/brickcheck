@@ -22,8 +22,11 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.warn('[collection/GET] ⚠️  No user found - authentication may have expired')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log(`[collection/GET] ✅ Fetching collection for user: ${user.id}`)
 
     const { searchParams } = new URL(request.url)
     const collectionId = searchParams.get('collectionId')
@@ -56,12 +59,14 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
+      console.error('[collection/GET] Error:', error.message)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log(`[collection/GET] ✅ Found ${data?.length || 0} items`)
     return NextResponse.json({ items: data || [] })
   } catch (error) {
-    console.error('Error fetching collection:', error)
+    console.error('[collection/GET] Catch block error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch collection', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

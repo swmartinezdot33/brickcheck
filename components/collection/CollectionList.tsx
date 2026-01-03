@@ -16,14 +16,20 @@ interface CollectionListProps {
 export function CollectionList({ onEdit, retiredFilter = 'all' }: CollectionListProps) {
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['collection'],
     queryFn: async () => {
-      const res = await fetch('/api/collection')
+      const res = await fetch('/api/collection', {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (!res.ok) throw new Error('Failed to fetch collection')
       const data = await res.json()
       return data.items as CollectionItemWithSet[]
     },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache
   })
 
   const deleteMutation = useMutation({
