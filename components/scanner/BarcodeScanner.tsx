@@ -16,6 +16,11 @@ interface DetectedCode {
   width: number // Width (0-1 normalized)
   height: number // Height (0-1 normalized)
   timestamp: number
+  setInfo?: {
+    name: string
+    imageUrl: string | null
+    setNumber: string
+  } | null
 }
 
 export function BarcodeScanner({
@@ -93,6 +98,48 @@ export function BarcodeScanner({
   // The video element uses object-cover which maintains aspect ratio, so normalized
   // coordinates should map correctly to the display
 
+  // Lookup set information for a detected code
+  const lookupSetInfo = async (code: string, format: BarcodeFormat): Promise<DetectedCode['setInfo'] | null> => {
+    try {
+      // Only lookup for QR codes, Data Matrix, or if it looks like a set number
+      const isQR = format === BarcodeFormat.QR_CODE || format === BarcodeFormat.DATA_MATRIX
+      const isSetNumber = /^\d{4,7}$/.test(code) || code.includes('lego.com') || code.includes('set=')
+      
+      if (!isQR && !isSetNumber) {
+        // For barcodes, try GTIN lookup
+        const res = await fetch(`/api/scanLookup?gtin=${encodeURIComponent(code)}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.set) {
+            return {
+              name: data.set.name,
+              imageUrl: data.set.image_url,
+              setNumber: data.set.set_number,
+            }
+          }
+        }
+        return null
+      }
+
+      // For QR codes or set numbers, try scanLookup
+      const res = await fetch(`/api/scanLookup?code=${encodeURIComponent(code)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.set) {
+          return {
+            name: data.set.name,
+            imageUrl: data.set.image_url,
+            setNumber: data.set.set_number,
+          }
+        }
+      }
+      return null
+    } catch (error) {
+      console.debug('Set lookup error:', error)
+      return null
+    }
+  }
+
   const startScanning = async () => {
     try {
       setError(null)
@@ -107,11 +154,12 @@ export function BarcodeScanner({
       const codeReader = new BrowserMultiFormatReader()
       codeReaderRef.current = codeReader
 
-      // Configure hints - prioritize QR/Data Matrix but allow all formats
+      // Configure hints - PRIORITIZE QR/Data Matrix FIRST (order matters!)
       const hints = new Map()
+      // Put QR_CODE and DATA_MATRIX FIRST to prioritize them
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.QR_CODE,
-        BarcodeFormat.DATA_MATRIX,
+        BarcodeFormat.QR_CODE,        // FIRST - highest priority
+        BarcodeFormat.DATA_MATRIX,    // SECOND - high priority
         BarcodeFormat.EAN_13,
         BarcodeFormat.EAN_8,
         BarcodeFormat.UPC_A,
@@ -120,7 +168,15 @@ export function BarcodeScanner({
         BarcodeFormat.CODE_39,
       ])
       hints.set(DecodeHintType.TRY_HARDER, true)
+      hints.set(DecodeHintType.ASSUME_GS1, false) // Don't assume GS1 format
+      // Additional hints for better QR code detection
+      hints.set(DecodeHintType.CHARACTER_SET, 'UTF-8')
+      // More aggressive QR code detection
+      hints.set(DecodeHintType.PURE_BARCODE, false) // Allow QR codes with surrounding text/noise
       codeReader.hints = hints
+      
+      // Log configured formats for debugging
+      console.log('[Scanner] Configured formats:', hints.get(DecodeHintType.POSSIBLE_FORMATS))
 
       // Get available video input devices
       const videoInputDevices = await codeReader.listVideoInputDevices()
@@ -129,8 +185,30 @@ export function BarcodeScanner({
         throw new Error('No camera devices found. Please check your camera permissions.')
       }
 
-      // Use the first available camera (usually the default)
-      const selectedDeviceId = videoInputDevices[0].deviceId
+      // Prefer back camera on mobile, but use any available camera on desktop
+      let selectedDeviceId = videoInputDevices[0].deviceId
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      
+      if (isMobile) {
+        // On mobile, prefer back camera (environment)
+        const backCamera = videoInputDevices.find(
+          (device) => device.label.toLowerCase().includes('back') || 
+                      device.label.toLowerCase().includes('rear') ||
+                      device.label.toLowerCase().includes('environment')
+        )
+        if (backCamera) {
+          selectedDeviceId = backCamera.deviceId
+        }
+      } else {
+        // On desktop, prefer the first non-virtual camera (webcams usually come first)
+        const webcam = videoInputDevices.find(
+          (device) => !device.label.toLowerCase().includes('virtual') &&
+                      !device.label.toLowerCase().includes('screen')
+        )
+        if (webcam) {
+          selectedDeviceId = webcam.deviceId
+        }
+      }
 
       if (!videoRef.current) {
         throw new Error('Video element not found')
@@ -138,20 +216,78 @@ export function BarcodeScanner({
 
       // Request camera permissions explicitly
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment', // Use back camera on mobile
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        })
+        let constraints: MediaStreamConstraints
+        
+        if (isMobile) {
+          // On mobile, use facingMode
+          constraints = {
+            video: {
+              facingMode: 'environment', // Back camera on mobile
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          }
+        } else {
+          // On desktop, use deviceId (prefer specific device, fallback to default)
+          constraints = {
+            video: {
+              deviceId: { ideal: selectedDeviceId }, // Prefer specific device
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          }
+        }
+        
+        let stream: MediaStream
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints)
+        } catch (deviceError) {
+          // If deviceId fails on desktop, try without it (fallback to default camera)
+          if (!isMobile) {
+            console.warn('Failed with specific device, trying default camera:', deviceError)
+            constraints = {
+              video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            }
+            stream = await navigator.mediaDevices.getUserMedia(constraints)
+          } else {
+            throw deviceError
+          }
+        }
         
         // Set the stream to the video element
         if (videoRef.current) {
           videoRef.current.srcObject = stream
+          // Wait for video to be ready before starting decode
+          await new Promise((resolve) => {
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = () => {
+                resolve(undefined)
+              }
+            }
+          })
         }
       } catch (permError) {
-        throw new Error('Camera permission denied. Please allow camera access and try again.')
+        console.error('Camera access error:', permError)
+        if (permError instanceof Error) {
+          if (permError.name === 'NotAllowedError' || permError.name === 'PermissionDeniedError') {
+            throw new Error('Camera permission denied. Please allow camera access in your browser settings and try again.')
+          } else if (permError.name === 'NotFoundError' || permError.name === 'DevicesNotFoundError') {
+            throw new Error('No camera found. Please connect a camera and try again.')
+          } else if (permError.name === 'NotReadableError' || permError.name === 'TrackStartError') {
+            throw new Error('Camera is already in use by another application. Please close other apps using the camera.')
+          }
+        }
+        throw new Error(`Camera access failed: ${permError instanceof Error ? permError.message : 'Unknown error'}`)
+      }
+
+      // Ensure video is playing before starting decode
+      if (videoRef.current) {
+        videoRef.current.play().catch((err) => {
+          console.warn('Video play failed:', err)
+        })
       }
 
       // Start continuous decoding - don't auto-confirm
@@ -162,7 +298,12 @@ export function BarcodeScanner({
           if (result) {
             const format = result.getBarcodeFormat()
             const code = result.getText().trim()
-            const cleanCode = code.replace(/\s+/g, '')
+            
+            // For QR codes and Data Matrix, preserve the full text (may contain URLs)
+            // For barcodes, remove spaces
+            const cleanCode = (format === BarcodeFormat.QR_CODE || format === BarcodeFormat.DATA_MATRIX)
+              ? code // Keep full text for QR/Data Matrix (may be URLs)
+              : code.replace(/\s+/g, '') // Remove spaces for barcodes
 
             if (cleanCode && cleanCode.length > 0) {
               // Get result points (corners of the barcode)
@@ -199,9 +340,34 @@ export function BarcodeScanner({
                   // Create unique ID for this code
                   const codeId = `${cleanCode}_${format}`
 
+                  // Log detection for debugging (especially QR codes)
+                  if (format === BarcodeFormat.QR_CODE || format === BarcodeFormat.DATA_MATRIX) {
+                    console.log(`[Scanner] Detected ${format === BarcodeFormat.QR_CODE ? 'QR_CODE' : 'DATA_MATRIX'}:`, cleanCode.substring(0, 50))
+                  }
+
                   // Update detected codes
                   setDetectedCodes((prev) => {
                     const updated = new Map(prev)
+                    const existingCode = prev.get(codeId)
+                    
+                    // Only lookup set info if this is a new detection or we don't have info yet
+                    if (!existingCode || !existingCode.setInfo) {
+                      // Async lookup set information
+                      lookupSetInfo(cleanCode, format).then((setInfo) => {
+                        setDetectedCodes((prev) => {
+                          const updated = new Map(prev)
+                          const code = updated.get(codeId)
+                          if (code) {
+                            updated.set(codeId, { ...code, setInfo })
+                          }
+                          return updated
+                        })
+                      }).catch((err) => {
+                        // Silently fail - set info is optional
+                        console.debug('Set lookup failed for code:', cleanCode, err)
+                      })
+                    }
+                    
                     updated.set(codeId, {
                       id: codeId,
                       code: cleanCode,
@@ -211,6 +377,7 @@ export function BarcodeScanner({
                       width: Math.max(width, 0.1), // Minimum width for visibility
                       height: Math.max(height, 0.05), // Minimum height for visibility
                       timestamp: Date.now(),
+                      setInfo: existingCode?.setInfo, // Preserve existing setInfo if any
                     })
                     return updated
                   })
@@ -219,15 +386,20 @@ export function BarcodeScanner({
             }
           }
           if (err) {
-            // Silently ignore NotFoundException - it's normal when scanning
-            if (
+            // Log QR code detection attempts for debugging
+            if (err.name === 'NotFoundException' || err.name === 'NoBarcodeDetectedException') {
+              // This is normal - log occasionally to see detection attempts
+              if (Math.random() < 0.05) {
+                console.debug('[Scanner] Scanning for codes...')
+              }
+            } else if (
               err.name !== 'NotFoundException' &&
               err.name !== 'NoBarcodeDetectedException' &&
               !err.message?.includes('No barcode detected')
             ) {
-              // Only log occasionally to avoid console spam
-              if (Math.random() < 0.01) {
-                console.debug('Scanning...', err.name)
+              // Log other errors more frequently for debugging
+              if (Math.random() < 0.1) {
+                console.debug('[Scanner] Error:', err.name, err.message)
               }
             }
           }
@@ -273,18 +445,34 @@ export function BarcodeScanner({
 
   const codesArray = Array.from(detectedCodes.values())
 
+  // Check if we're in full screen mode (mobile) - use state to avoid hydration issues
+  const [isFullScreen, setIsFullScreen] = useState(false)
+  
+  useEffect(() => {
+    const checkFullScreen = () => {
+      setIsFullScreen(window.innerWidth < 768)
+    }
+    checkFullScreen()
+    window.addEventListener('resize', checkFullScreen)
+    return () => window.removeEventListener('resize', checkFullScreen)
+  }, [])
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Barcode Scanner</CardTitle>
-        <CardDescription>
-          Point your camera at barcodes. Tap a detected code to select it.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card className={isFullScreen ? 'border-0 shadow-none h-full flex flex-col' : ''}>
+      {!isFullScreen && (
+        <CardHeader>
+          <CardTitle>Barcode Scanner</CardTitle>
+          <CardDescription>
+            Point your camera at barcodes. Tap a detected code to select it.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={`space-y-4 ${isFullScreen ? 'flex-1 flex flex-col p-0' : ''}`}>
         <div 
           ref={containerRef}
-          className="relative aspect-video bg-black rounded-lg overflow-hidden"
+          className={`relative bg-black overflow-hidden ${
+            isFullScreen ? 'flex-1 w-full h-full' : 'aspect-video rounded-lg'
+          }`}
         >
           <video
             ref={videoRef}
@@ -313,22 +501,40 @@ export function BarcodeScanner({
                   <button
                     key={code.id}
                     onClick={() => handleCodeClick(code)}
-                    className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-105"
+                    className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-105 z-10"
                     style={{
                       left: `${displayX}%`,
                       top: `${displayY}%`,
-                      minWidth: '80px',
+                      minWidth: code.setInfo ? '140px' : '80px',
                     }}
                   >
                     <Badge 
                       variant="default" 
-                      className="bg-primary/90 hover:bg-primary text-white shadow-lg border-2 border-white/50 px-3 py-1.5 text-xs font-semibold cursor-pointer"
+                      className={`bg-primary/90 hover:bg-primary text-white shadow-lg border-2 border-white/50 px-2 py-1.5 text-xs font-semibold cursor-pointer ${
+                        code.setInfo ? 'flex items-center gap-2' : ''
+                      }`}
                     >
+                      {code.setInfo?.imageUrl && (
+                        <img
+                          src={code.setInfo.imageUrl}
+                          alt={code.setInfo.name}
+                          className="w-8 h-8 rounded object-cover border border-white/30"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      )}
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="font-bold">{getFormatName(code.format)}</span>
-                        <span className="text-[10px] opacity-90 truncate max-w-[120px]">
-                          {code.code.length > 12 ? `${code.code.substring(0, 12)}...` : code.code}
-                        </span>
+                        {code.setInfo ? (
+                          <span className="text-[10px] opacity-90 truncate max-w-[100px] font-medium">
+                            {code.setInfo.name.length > 15 ? `${code.setInfo.name.substring(0, 15)}...` : code.setInfo.name}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] opacity-90 truncate max-w-[120px]">
+                            {code.code.length > 12 ? `${code.code.substring(0, 12)}...` : code.code}
+                          </span>
+                        )}
                       </div>
                     </Badge>
                   </button>
@@ -344,27 +550,54 @@ export function BarcodeScanner({
           </div>
         )}
 
-        <div className="flex gap-2">
-          {!isScanning ? (
-            <Button onClick={startScanning} className="flex-1">
-              <Camera className="h-4 w-4 mr-2" />
-              Start Scanning
-            </Button>
-          ) : (
-            <Button onClick={stopScanning} variant="destructive" className="flex-1">
-              <CameraOff className="h-4 w-4 mr-2" />
-              Stop Scanning
-            </Button>
-          )}
-        </div>
+        {!isFullScreen && (
+          <>
+            <div className="flex gap-2">
+              {!isScanning ? (
+                <Button onClick={startScanning} className="flex-1">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Start Scanning
+                </Button>
+              ) : (
+                <Button onClick={stopScanning} variant="destructive" className="flex-1">
+                  <CameraOff className="h-4 w-4 mr-2" />
+                  Stop Scanning
+                </Button>
+              )}
+            </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Make sure to allow camera access when prompted. Multiple codes will appear as overlays - tap the one you want to scan.
-        </p>
+            <p className="text-xs text-muted-foreground text-center">
+              Make sure to allow camera access when prompted. Multiple codes will appear as overlays - tap the one you want to scan.
+            </p>
 
-        {isScanning && codesArray.length > 0 && (
-          <div className="text-xs text-muted-foreground text-center">
-            {codesArray.length} code{codesArray.length !== 1 ? 's' : ''} detected
+            {isScanning && codesArray.length > 0 && (
+              <div className="text-xs text-muted-foreground text-center">
+                {codesArray.length} code{codesArray.length !== 1 ? 's' : ''} detected
+              </div>
+            )}
+          </>
+        )}
+        
+        {isFullScreen && (
+          <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
+            <div className="flex gap-2">
+              {!isScanning ? (
+                <Button onClick={startScanning} className="flex-1" size="lg">
+                  <Camera className="h-5 w-5 mr-2" />
+                  Start Scanning
+                </Button>
+              ) : (
+                <Button onClick={stopScanning} variant="destructive" className="flex-1" size="lg">
+                  <CameraOff className="h-5 w-5 mr-2" />
+                  Stop Scanning
+                </Button>
+              )}
+            </div>
+            {isScanning && codesArray.length > 0 && (
+              <div className="text-sm text-white text-center mt-2 bg-black/50 rounded px-3 py-1">
+                {codesArray.length} code{codesArray.length !== 1 ? 's' : ''} detected
+              </div>
+            )}
           </div>
         )}
       </CardContent>
