@@ -102,14 +102,48 @@ export async function POST(request: NextRequest) {
       }
 
       const text = await file.text()
-      const lines = text.split('\n').filter((line) => line.trim())
+      
+      // Simple CSV parser that handles quoted fields
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = []
+        let current = ''
+        let inQuotes = false
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]
+          const nextChar = line[i + 1]
+          
+          if (char === '"') {
+            if (inQuotes && nextChar === '"') {
+              // Escaped quote
+              current += '"'
+              i++ // Skip next quote
+            } else {
+              // Toggle quote state
+              inQuotes = !inQuotes
+            }
+          } else if (char === ',' && !inQuotes) {
+            // End of field
+            result.push(current.trim())
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        
+        // Add last field
+        result.push(current.trim())
+        return result
+      }
+
+      const lines = text.split(/\r?\n/).filter((line) => line.trim())
       
       if (lines.length < 2) {
         return NextResponse.json({ error: 'CSV file must have a header row and at least one data row' }, { status: 400 })
       }
 
       // Parse CSV header
-      const header = lines[0].split(',').map((h) => h.trim().toLowerCase())
+      const header = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase())
       const setNumberIndex = header.findIndex((h) => h === 'set_number' || h === 'setnumber' || h === 'set')
       const quantityIndex = header.findIndex((h) => h === 'quantity' || h === 'qty')
       const conditionIndex = header.findIndex((h) => h === 'condition' || h === 'state')
@@ -123,8 +157,8 @@ export async function POST(request: NextRequest) {
 
       // Parse CSV rows
       setsToImport = lines.slice(1).map((line) => {
-        const values = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''))
-        const setNumber = values[setNumberIndex] || ''
+        const values = parseCSVLine(line)
+        const setNumber = (values[setNumberIndex] || '').trim()
         const quantity = quantityIndex >= 0 && values[quantityIndex] ? parseInt(values[quantityIndex], 10) : 1
         const condition = conditionIndex >= 0 && values[conditionIndex] 
           ? (values[conditionIndex].toUpperCase() === 'SEALED' ? 'SEALED' : 'USED')
@@ -132,7 +166,7 @@ export async function POST(request: NextRequest) {
 
         return {
           set_number: setNumber,
-          quantity: isNaN(quantity) ? 1 : quantity,
+          quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
           condition,
         }
       }).filter((set) => set.set_number && set.set_number.length > 0)
