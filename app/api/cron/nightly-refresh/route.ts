@@ -60,8 +60,18 @@ export async function POST(request: NextRequest) {
         const sealedPrices = await priceProvider.getPrices(set.set_number, 'SEALED')
         const usedPrices = await priceProvider.getPrices(set.set_number, 'USED')
 
-        // Determine source from environment
-        const source = process.env.BRICKECONOMY_API_KEY ? 'BRICKECONOMY' : 'BRICKLINK'
+        // Determine source(s) - composite provider may use multiple sources
+        const sources: string[] = []
+        if (process.env.BRICKECONOMY_API_KEY) sources.push('BRICKECONOMY')
+        if (
+          process.env.BRICKLINK_CONSUMER_KEY &&
+          process.env.BRICKLINK_CONSUMER_SECRET &&
+          process.env.BRICKLINK_TOKEN &&
+          process.env.BRICKLINK_TOKEN_SECRET
+        ) {
+          sources.push('BRICKLINK')
+        }
+        const source = sources.join('+') || 'UNKNOWN'
 
         // Store latest price snapshots
         const snapshotsToInsert = [

@@ -48,10 +48,12 @@ A production-ready MVP for tracking LEGO collection market values over time, sim
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
    # APIs (REQUIRED - no mock data)
-   # At least one catalog API and one price API must be configured
-   BRICKECONOMY_API_KEY=  # Preferred - provides both catalog and pricing
-   BRICKSET_API_KEY=  # Alternative catalog API (requires userHash for full functionality)
-   BRICKLINK_CONSUMER_KEY=  # Alternative price API
+   # App aggregates data from ALL configured sources for best results
+   # Minimum: 1 catalog API + 1 price API
+   # Optimal: Configure ALL APIs for comprehensive data
+   BRICKECONOMY_API_KEY=  # Provides both catalog and pricing (recommended)
+   BRICKSET_API_KEY=  # Additional catalog source (optional but recommended)
+   BRICKLINK_CONSUMER_KEY=  # Additional price source (optional but recommended)
    BRICKLINK_CONSUMER_SECRET=
    BRICKLINK_TOKEN=
    BRICKLINK_TOKEN_SECRET=
