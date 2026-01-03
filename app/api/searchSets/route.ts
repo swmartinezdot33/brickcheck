@@ -13,23 +13,22 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
+    // ALWAYS call APIs first to get real data, then merge with database
+    // This ensures we get fresh results from APIs, not just cached seed data
     console.log(`[searchSets] Searching for: "${query}"`)
     
     let apiResults: any[] = []
-    let apiError: Error | null = null
-    
-    // 1. Call API Providers
     try {
       const catalogProvider = getCatalogProvider()
-      console.log(`[searchSets] Calling API providers for query: "${query}"`)
+      console.log(`[searchSets] Calling API providers...`)
       apiResults = await catalogProvider.searchSets(query)
-      console.log(`[searchSets] ✅ API returned ${apiResults.length} results`)
+      console.log(`[searchSets] API returned ${apiResults.length} results`)
     } catch (providerError) {
-      apiError = providerError instanceof Error ? providerError : new Error(String(providerError))
-      console.error('[searchSets] ❌ Catalog provider error:', apiError.message)
+      console.error('[searchSets] Catalog provider error:', providerError)
+      // If API fails, we'll fall back to database results below
     }
 
-    // 2. Search Database
+    // Also check database for any additional results
     const searchPattern = `%${query}%`
     const [nameResults, numberResults, themeResults] = await Promise.all([
       supabase.from('sets').select('*').ilike('name', searchPattern).limit(50),
@@ -43,10 +42,10 @@ export async function GET(request: NextRequest) {
       ...(themeResults.data || []),
     ]
 
-    // 3. Merge Results
+    // Merge API results with database results
     const allResults = new Map<string, any>()
 
-    // Add API results first
+    // Add API results first (preferred - they're fresh)
     for (const set of apiResults) {
       allResults.set(set.setNumber, {
         setNumber: set.setNumber,
@@ -63,7 +62,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Add database results
+    // Add database results (only if not already in API results)
     for (const set of dbResults) {
       if (!allResults.has(set.set_number)) {
         allResults.set(set.set_number, {
@@ -77,16 +76,16 @@ export async function GET(request: NextRequest) {
           retired: set.retired,
           bricksetId: set.brickset_id,
           bricklinkId: set.bricklink_id,
-          gtin: undefined, 
+          gtin: undefined, // Will be looked up if needed
         })
       }
     }
 
-    // 4. Prepare Results for Response
+    // Convert to array and upsert API results to database
     const resultsArray = Array.from(allResults.values())
     
-    // Only attempt database upsert if we actually have API results to save
     if (apiResults.length > 0) {
+      // Upsert API results into database for future caching
       const setsToInsert = apiResults.map((set) => ({
         set_number: set.setNumber,
         name: set.name,
@@ -100,9 +99,7 @@ export async function GET(request: NextRequest) {
         bricklink_id: set.bricklinkId || null,
       }))
 
-      // Background the upsert if possible, or await it but handle errors gracefully
-      // We'll await it to try and get real IDs, but fallback to temp IDs on failure
-      const { data: upsertedSets, error: upsertError } = await supabase
+      const { data: upsertedSets, error } = await supabase
         .from('sets')
         .upsert(setsToInsert, {
           onConflict: 'set_number',
@@ -110,17 +107,32 @@ export async function GET(request: NextRequest) {
         })
         .select()
 
-      if (!upsertError && upsertedSets) {
-        // Map results to include database IDs
-        const dbSetMap = new Map(upsertedSets.map((s) => [s.set_number, s]))
-        
-        const finalResults = resultsArray.map((result) => {
-          const dbSet = dbSetMap.get(result.setNumber)
-          if (dbSet) {
-            return dbSet // Use the full DB object which has the correct UUID 'id'
+      if (!error && upsertedSets) {
+        // Upsert GTINs if available
+        for (const set of apiResults) {
+          if (set.gtin) {
+            const setData = upsertedSets.find((s) => s.set_number === set.setNumber)
+            if (setData) {
+              await supabase.from('set_identifiers').upsert(
+                {
+                  set_id: setData.id,
+                  identifier_type: 'GTIN',
+                  identifier_value: set.gtin,
+                  source: 'BRICKSET',
+                },
+                {
+                  onConflict: 'identifier_value',
+                  ignoreDuplicates: false,
+                }
+              )
+            }
           }
-          // If upsert worked but this specific set isn't in the returned list (unlikely), fallback
-          return {
+        }
+
+        // Map results to include database IDs
+        const finalResults = resultsArray.map((result) => {
+          const dbSet = upsertedSets.find((s) => s.set_number === result.setNumber)
+          return dbSet || {
             id: `temp-${result.setNumber}`,
             set_number: result.setNumber,
             name: result.name,
@@ -134,14 +146,17 @@ export async function GET(request: NextRequest) {
             bricklink_id: result.bricklinkId,
           }
         })
+
+        console.log(`[searchSets] Returning ${finalResults.length} results (${apiResults.length} from API)`)
         return NextResponse.json({ results: finalResults })
-      } else {
-          console.error('[searchSets] Upsert failed:', upsertError)
       }
     }
 
-    // Fallback: If no API results or upsert failed, return what we have with temp IDs for non-DB items
-    const fallbackResults = resultsArray.map((result) => {
+    // If no API results, return database results (if any)
+    if (resultsArray.length > 0) {
+      console.log(`[searchSets] Returning ${resultsArray.length} results from database only`)
+      // Convert to database format
+      const dbFormatted = resultsArray.map((result) => {
         const dbSet = dbResults.find((s) => s.set_number === result.setNumber)
         return dbSet || {
           id: `temp-${result.setNumber}`,
@@ -156,15 +171,15 @@ export async function GET(request: NextRequest) {
           brickset_id: result.bricksetId,
           bricklink_id: result.bricklinkId,
         }
-    })
+      })
+      return NextResponse.json({ results: dbFormatted })
+    }
 
-    return NextResponse.json({ 
-        results: fallbackResults,
-        warning: apiError ? `API partial failure: ${apiError.message}` : undefined
-    })
-
+    // No results at all
+    console.log(`[searchSets] No results found`)
+    return NextResponse.json({ results: [] })
   } catch (error) {
-    console.error('[searchSets] Critical error:', error)
+    console.error('[searchSets] Error searching sets:', error)
     return NextResponse.json(
       { error: 'Failed to search sets', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
