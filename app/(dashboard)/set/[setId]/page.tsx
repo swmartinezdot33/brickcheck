@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { PriceChart } from '@/components/pricing/PriceChart'
+import { RecentSales } from '@/components/pricing/RecentSales'
 import { formatCurrency } from '@/lib/utils'
 import { Loader2, TrendingUp, TrendingDown } from 'lucide-react'
 
@@ -127,6 +128,9 @@ export default function SetDetailPage({
                 )}
               </div>
               <PriceChart data={pricing.chartData} condition="SEALED" />
+              {pricing.recentSnapshots && pricing.recentSnapshots.length > 0 && (
+                <RecentSales snapshots={pricing.recentSnapshots} condition="SEALED" />
+              )}
             </>
           ) : (
             <Card>
@@ -196,6 +200,9 @@ export default function SetDetailPage({
                 )}
               </div>
               <PriceChart data={pricing.chartData} condition="USED" />
+              {pricing.recentSnapshots && pricing.recentSnapshots.length > 0 && (
+                <RecentSales snapshots={pricing.recentSnapshots} condition="USED" />
+              )}
             </>
           ) : (
             <Card>

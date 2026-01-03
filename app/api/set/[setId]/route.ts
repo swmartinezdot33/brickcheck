@@ -99,7 +99,7 @@ export async function GET(
           },
         },
         chartData: chartSeries,
-        recentSnapshots: recentSnapshots.slice(0, 10), // Last 10 for recent data table
+        recentSnapshots: snapshots ? snapshots.slice(0, 50) : [], // Last 50 for recent sales table
       },
     })
   } catch (error) {
