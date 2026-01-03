@@ -72,19 +72,13 @@ export function BarcodeScanner({
         throw new Error('Camera permission denied. Please allow camera access and try again.')
       }
 
-      // Configure hints for better barcode detection
+      // Configure hints for QR code detection only (not barcodes)
       const hints = new Map()
-      // Enable common barcode formats: UPC-A, EAN-13, Code 128, etc.
+      // Only enable QR code format - disable all barcode formats
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.UPC_A,
-        BarcodeFormat.UPC_E,
-        BarcodeFormat.EAN_13,
-        BarcodeFormat.EAN_8,
-        BarcodeFormat.CODE_128,
-        BarcodeFormat.CODE_39,
+        BarcodeFormat.QR_CODE,
       ])
       hints.set(DecodeHintType.TRY_HARDER, true)
-      hints.set(DecodeHintType.ASSUME_GS1, false)
 
       codeReader.hints = hints
 
@@ -102,8 +96,8 @@ export function BarcodeScanner({
             // Clean up the code (remove spaces, validate)
             const cleanCode = code.replace(/\s+/g, '')
             
-            // Validate barcode length (UPC-A is 12 digits, EAN-13 is 13, etc.)
-            if (cleanCode && /^\d{8,13}$/.test(cleanCode)) {
+            // QR codes can contain any text, so we accept any non-empty code
+            if (cleanCode && cleanCode.length > 0) {
               if (cleanCode === lastDetectedCode) {
                 detectionCount++
                 // Only process after multiple confirmations to avoid false positives
@@ -170,7 +164,7 @@ export function BarcodeScanner({
     <Card>
       <CardHeader>
         <CardTitle>Barcode Scanner</CardTitle>
-        <CardDescription>Point your camera at a LEGO box barcode</CardDescription>
+        <CardDescription>Point your camera at a QR code</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
@@ -210,7 +204,7 @@ export function BarcodeScanner({
 
         <p className="text-xs text-muted-foreground text-center">
           Make sure to allow camera access when prompted. The scanner will automatically detect
-          barcodes.
+          QR codes.
         </p>
       </CardContent>
     </Card>
