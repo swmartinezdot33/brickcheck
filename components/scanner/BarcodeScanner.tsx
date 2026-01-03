@@ -89,29 +89,9 @@ export function BarcodeScanner({
     }
   }, [])
 
-  // Calculate coordinate mapping from video source to display
-  const getCoordinateMapping = useCallback(() => {
-    if (!videoRef.current || !containerRef.current) {
-      return { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 }
-    }
-
-    const video = videoRef.current
-    const container = containerRef.current
-
-    // Get video's natural dimensions (source resolution)
-    const videoWidth = video.videoWidth || 1280
-    const videoHeight = video.videoHeight || 720
-
-    // Get displayed dimensions
-    const displayWidth = container.clientWidth
-    const displayHeight = container.clientHeight
-
-    // Calculate scale factors
-    const scaleX = displayWidth / videoWidth
-    const scaleY = displayHeight / videoHeight
-
-    return { scaleX, scaleY, offsetX: 0, offsetY: 0 }
-  }, [])
+  // Note: Coordinates are already normalized to 0-1 range based on video source dimensions
+  // The video element uses object-cover which maintains aspect ratio, so normalized
+  // coordinates should map correctly to the display
 
   const startScanning = async () => {
     try {
@@ -291,7 +271,6 @@ export function BarcodeScanner({
     onScan(code.code)
   }
 
-  const mapping = getCoordinateMapping()
   const codesArray = Array.from(detectedCodes.values())
 
   return (

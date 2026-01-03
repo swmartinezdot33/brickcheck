@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         const values = parseCSVLine(line)
         const setNumber = (values[setNumberIndex] || '').trim()
         const quantity = quantityIndex >= 0 && values[quantityIndex] ? parseInt(values[quantityIndex], 10) : 1
-        const condition = conditionIndex >= 0 && values[conditionIndex] 
+        const condition: 'SEALED' | 'USED' = conditionIndex >= 0 && values[conditionIndex] 
           ? (values[conditionIndex].toUpperCase() === 'SEALED' ? 'SEALED' : 'USED')
           : 'SEALED'
 
