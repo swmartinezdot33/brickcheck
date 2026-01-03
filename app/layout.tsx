@@ -17,6 +17,16 @@ export const metadata: Metadata = {
   title: "BrickCheck - LEGO Collection Value Tracker App",
   description: "Download BrickCheck on iOS and Android to track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts. Available on the App Store and Google Play.",
   metadataBase: new URL('https://www.brickcheck.app'),
+  icons: {
+    icon: [
+      {
+        url: '/favicon.svg',
+        type: 'image/svg+xml',
+        sizes: 'any',
+      },
+    ],
+    apple: '/favicon.svg',
+  },
   openGraph: {
     title: "BrickCheck - LEGO Collection Value Tracker App",
     description: "Download BrickCheck on iOS and Android to track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts. Available on the App Store and Google Play.",

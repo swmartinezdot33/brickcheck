@@ -7,7 +7,7 @@ const sendNotificationSchema = z.object({
   user_id: z.string().uuid(),
   title: z.string().min(1),
   body: z.string().min(1),
-  data: z.record(z.any()).optional(),
+  data: z.record(z.string(), z.any()).optional(),
 })
 
 /**

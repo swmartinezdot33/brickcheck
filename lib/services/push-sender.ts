@@ -157,7 +157,7 @@ async function sendAPNsNotification(
     notification.topic = process.env.APNS_BUNDLE_ID || 'com.brickcheck.app'
     notification.payload = data || {}
     notification.priority = 10
-    notification.pushType = 'alert'
+    // notification.pushType = 'alert' // Not available in current type definition
 
     const result = await provider.send(notification, token)
     
