@@ -65,12 +65,46 @@ export class BrickEconomyProvider implements CatalogProvider, PriceProvider {
     try {
       console.log(`[BrickEconomyProvider] Searching for: "${query}"`)
       // Use rate limiter to respect API limits
-      const data = await this.rateLimiter.execute(() =>
-        this.makeRequest('/sets/search', {
-          q: query,
-          limit: '50',
-        })
-      )
+      // Try different endpoint formats - BrickEconomy API might use different paths
+      let data: any = null
+      let lastError: Error | null = null
+      
+      // Try /sets/search first
+      try {
+        data = await this.rateLimiter.execute(() =>
+          this.makeRequest('/sets/search', {
+            q: query,
+            limit: '50',
+          })
+        )
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err))
+        console.log(`[BrickEconomyProvider] /sets/search failed, trying /search`)
+        
+        // Try /search as alternative
+        try {
+          data = await this.rateLimiter.execute(() =>
+            this.makeRequest('/search', {
+              query: query,
+              limit: '50',
+            })
+          )
+        } catch (err2) {
+          console.log(`[BrickEconomyProvider] /search also failed, trying /sets`)
+          
+          // Try /sets with query param
+          try {
+            data = await this.rateLimiter.execute(() =>
+              this.makeRequest('/sets', {
+                search: query,
+                limit: '50',
+              })
+            )
+          } catch (err3) {
+            throw lastError || err3
+          }
+        }
+      }
       
       console.log(`[BrickEconomyProvider] Raw API response keys:`, Object.keys(data || {}))
       console.log(`[BrickEconomyProvider] Full response:`, JSON.stringify(data).substring(0, 1000))

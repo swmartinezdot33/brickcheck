@@ -18,16 +18,21 @@ export async function GET(request: NextRequest) {
     console.log(`[searchSets] Searching for: "${query}"`)
     
     let apiResults: any[] = []
+    let apiError: Error | null = null
     try {
       const catalogProvider = getCatalogProvider()
-      console.log(`[searchSets] Calling API providers...`)
+      console.log(`[searchSets] Calling API providers for query: "${query}"`)
       apiResults = await catalogProvider.searchSets(query)
-      console.log(`[searchSets] API returned ${apiResults.length} results`)
+      console.log(`[searchSets] ✅ API returned ${apiResults.length} results`)
+      if (apiResults.length > 0) {
+        console.log(`[searchSets] First result:`, JSON.stringify(apiResults[0], null, 2))
+      }
     } catch (providerError) {
-      console.error('[searchSets] Catalog provider error:', providerError)
-      console.error('[searchSets] Error stack:', providerError instanceof Error ? providerError.stack : 'No stack trace')
-      // If API fails, we'll fall back to database results below
-      // Don't return error immediately - let it fall through to check database
+      apiError = providerError instanceof Error ? providerError : new Error(String(providerError))
+      console.error('[searchSets] ❌ Catalog provider error:', apiError.message)
+      console.error('[searchSets] Error stack:', apiError.stack)
+      console.error('[searchSets] Full error:', apiError)
+      // Continue to check database, but log the error clearly
     }
 
     // Also check database for any additional results
@@ -154,9 +159,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // If no API results, return database results (if any)
+    // If no API results, return database results (if any) with error info
     if (resultsArray.length > 0) {
-      console.log(`[searchSets] Returning ${resultsArray.length} results from database only`)
+      console.log(`[searchSets] ⚠️ No API results, returning ${resultsArray.length} cached results from database`)
       // Convert to database format
       const dbFormatted = resultsArray.map((result) => {
         const dbSet = dbResults.find((s) => s.set_number === result.setNumber)
@@ -174,12 +179,19 @@ export async function GET(request: NextRequest) {
           bricklink_id: result.bricklinkId,
         }
       })
-      return NextResponse.json({ results: dbFormatted })
+      return NextResponse.json({ 
+        results: dbFormatted,
+        warning: apiError ? `API unavailable: ${apiError.message}. Showing cached results only.` : 'Using cached results only.'
+      })
     }
 
-    // No results at all
-    console.log(`[searchSets] No results found`)
-    return NextResponse.json({ results: [] })
+    // No results at all - return error info
+    console.log(`[searchSets] ❌ No results found from API or database`)
+    return NextResponse.json({ 
+      results: [],
+      error: apiError ? `Search failed: ${apiError.message}` : 'No results found',
+      message: apiError ? apiError.message : `No sets found for "${query}". Try searching by set number (e.g., 75192) or name.`
+    })
   } catch (error) {
     console.error('[searchSets] Error searching sets:', error)
     return NextResponse.json(
