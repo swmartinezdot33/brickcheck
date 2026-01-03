@@ -223,15 +223,71 @@ async function evaluateAlerts(setId: string, supabase: any) {
       }
 
       // Create alert event
-      await supabase.from('alert_events').insert({
-        alert_id: alert.id,
-        set_id: setId,
-        triggered_at: new Date().toISOString(),
-        price_cents: estimate.estimatedValue,
-        previous_price_cents: previousPrice,
-        percent_change: percentChange,
-        notification_sent: false,
-      })
+      const { data: alertEvent } = await supabase
+        .from('alert_events')
+        .insert({
+          alert_id: alert.id,
+          set_id: setId,
+          triggered_at: new Date().toISOString(),
+          price_cents: estimate.estimatedValue,
+          previous_price_cents: previousPrice,
+          percent_change: percentChange,
+          notification_sent: false,
+        })
+        .select()
+        .single()
+
+      // Send push notification if event was created
+      if (alertEvent) {
+        try {
+          // Get set details for notification
+          const { data: setData } = await supabase.from('sets').select('name, set_number').eq('id', setId).single()
+          
+          const setName = setData?.name || 'LEGO Set'
+          const priceFormatted = `$${(estimate.estimatedValue / 100).toFixed(2)}`
+          
+          let notificationTitle = 'Price Alert Triggered'
+          let notificationBody = `${setName} price is now ${priceFormatted}`
+          
+          if (alert.alert_type === 'PERCENT_CHANGE' && percentChange) {
+            const changeSign = percentChange > 0 ? '+' : ''
+            notificationBody = `${setName} price changed ${changeSign}${percentChange.toFixed(1)}% to ${priceFormatted}`
+          } else if (alert.alert_type === 'THRESHOLD') {
+            notificationBody = `${setName} price reached ${priceFormatted}`
+          }
+
+          // Send notification (don't await - fire and forget to avoid blocking)
+          import('@/lib/services/push-sender')
+            .then(({ sendPushNotificationToUser }) => {
+              sendPushNotificationToUser(alert.user_id, notificationTitle, notificationBody, {
+                type: 'alert',
+                alert_id: alert.id,
+                set_id: setId,
+                alert_event_id: alertEvent.id,
+              })
+                .then((result) => {
+                  // Update notification_sent status
+                  if (result.sent > 0) {
+                    supabase
+                      .from('alert_events')
+                      .update({ notification_sent: true })
+                      .eq('id', alertEvent.id)
+                      .then(() => {
+                        console.log(`Sent push notification for alert ${alert.id}`)
+                      })
+                }
+              })
+              .catch((error) => {
+                console.error('Error sending push notification:', error)
+              })
+            })
+            .catch((error) => {
+              console.error('Error importing push sender:', error)
+            })
+        } catch (error) {
+          console.error('Error preparing push notification:', error)
+        }
+      }
     }
   }
 }

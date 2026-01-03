@@ -15,6 +15,11 @@ export type Database = {
           retired: boolean
           brickset_id: string | null
           bricklink_id: string | null
+          data_source: string | null
+          last_verified: string | null
+          data_quality_score: number | null
+          scraped_at: string | null
+          external_urls: Record<string, unknown> | null
           created_at: string
           updated_at: string
         }

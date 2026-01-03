@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BrickCheck</string>
+    <string name="title_activity_main">BrickCheck</string>
+    <string name="package_name">com.brickcheck.app</string>
+    <string name="custom_url_scheme">com.brickcheck.app</string>
+</resources>

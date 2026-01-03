@@ -143,7 +143,7 @@ The cron job will automatically refresh prices for all sets in user collections.
 - ✅ **Milestone E**: BrickLink API integration (fully operational with real data)
 - ✅ **Milestone F**: Pricing engine + Charts
 - ✅ **Milestone G**: Alerts + Cron refresh
-- ⏳ **Milestone H**: Mobile packaging (Future phase - web app is PWA-ready)
+- ✅ **Milestone H**: Mobile apps (iOS/Android with Capacitor)
 
 ## Phase Roadmap
 
@@ -153,17 +153,40 @@ The cron job will automatically refresh prices for all sets in user collections.
 - Price tracking and alerts
 - Barcode scanning
 
-### v1 Mobile
-- Capacitor or Expo wrapper
-- Native camera for scanning
-- Push notifications for alerts
-- Offline mode basics
+### v1 Mobile (✅ Complete)
+- ✅ Capacitor wrapper for iOS and Android
+- ✅ Native camera integration (web API works in Capacitor WebView)
+- ✅ Push notifications infrastructure (requires FCM/APNs setup)
+- ✅ App Store and Play Store ready
 
 ### v2 Marketplace Integrations
 - StockX integration (if API access)
 - eBay comps (if official API)
 - Multiple source price blending
 - Advanced analytics
+
+## Mobile Apps
+
+BrickCheck is available as native iOS and Android apps built with Capacitor.
+
+### Quick Start
+
+```bash
+# Open iOS project in Xcode
+npm run cap:ios
+
+# Open Android project in Android Studio
+npm run cap:android
+
+# Build and sync
+npm run cap:sync
+```
+
+See [docs/MOBILE_SETUP.md](docs/MOBILE_SETUP.md) for detailed mobile development setup.
+
+### App Store Submission
+
+See [docs/APP_STORE_SUBMISSION.md](docs/APP_STORE_SUBMISSION.md) for instructions on submitting to the App Store and Play Store.
 
 ## License
 

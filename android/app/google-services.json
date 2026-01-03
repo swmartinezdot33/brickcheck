@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1067192482230",
+    "project_id": "brickcheck-86fcb",
+    "storage_bucket": "brickcheck-86fcb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1067192482230:android:737c7d49e2678b726b6917",
+        "android_client_info": {
+          "package_name": "com.brickcheck.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASL59Q-FQndv1C3aDcNvE69EewDmOx79w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

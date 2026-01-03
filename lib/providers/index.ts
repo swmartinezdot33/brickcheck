@@ -1,13 +1,14 @@
 import { CatalogProvider, PriceProvider } from './base'
 import { CompositeCatalogProvider, CompositePriceProvider } from './composite'
+import { LocalCatalogProvider } from './local-catalog'
 
 /**
- * Factory function to get a composite catalog provider
- * Aggregates data from ALL available sources (BrickEconomy, Brickset)
- * NO MOCK DATA - throws error if no APIs are configured
+ * Factory function to get a local-first catalog provider
+ * Checks local database first, falls back to API providers only if not found
+ * Automatically caches all API results permanently
  */
 export function getCatalogProvider(): CatalogProvider {
-  return new CompositeCatalogProvider()
+  return new LocalCatalogProvider()
 }
 
 /**

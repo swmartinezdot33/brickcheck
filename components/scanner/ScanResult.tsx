@@ -113,3 +113,4 @@ export function ScanResult({ gtin, onReset }: ScanResultProps) {
   )
 }
 
+

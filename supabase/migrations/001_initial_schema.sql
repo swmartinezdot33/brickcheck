@@ -117,3 +117,4 @@ CREATE TRIGGER update_user_collection_items_updated_at BEFORE UPDATE ON user_col
 CREATE TRIGGER update_alerts_updated_at BEFORE UPDATE ON alerts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+

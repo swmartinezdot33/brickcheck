@@ -42,3 +42,4 @@ Some Brickset API methods might work without `userHash` for public data. We can 
 
 For now, the app will continue to work with mock data, and the API integration is ready to be activated once `userHash` is available.
 
+

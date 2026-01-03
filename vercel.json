@@ -3,7 +3,12 @@
     {
       "path": "/api/cron/nightly-refresh",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/catalog-sync",
+      "schedule": "0 3 * * *"
     }
   ]
 }
+
 

@@ -18,3 +18,4 @@ FROM sets s
 WHERE s.set_number IN ('75192', '71040', '10294', '21327', '10279')
 ON CONFLICT (identifier_value) DO NOTHING;
 
+
