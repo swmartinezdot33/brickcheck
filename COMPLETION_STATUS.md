@@ -66,12 +66,13 @@
 
 ### What's Working
 - ✅ Full authentication flow
-- ✅ Collection management
-- ✅ Set search (with mock data)
-- ✅ Barcode scanning
-- ✅ Price tracking structure
-- ✅ Dashboard and analytics
-- ✅ Alert system
+- ✅ Collection management with retired set filtering
+- ✅ Set search (Brickset integration ready, using mock fallback)
+- ✅ Barcode scanning with camera
+- ✅ Real-time price tracking with BrickLink API
+- ✅ Price history charts and trends
+- ✅ Dashboard with collection statistics
+- ✅ Alert system (threshold and percent-change)
 - ✅ Automated nightly price refresh
 
 ### API Integration Status
