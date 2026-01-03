@@ -56,7 +56,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r from-red-100/50 via-blue-100/50 to-green-100/50 backdrop-blur-sm border border-primary/20 mb-6 sm:mb-8 text-xs sm:text-sm animate-fade-in-down">
             <Smartphone className="h-3 w-3 sm:h-4 sm:w-4 text-primary animate-bounce-gentle" />
-            <span className="font-medium">Available on iOS</span>
+            <span className="font-medium">Available on iOS & Android</span>
           </div>
           
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight animate-fade-in-up">
@@ -69,7 +69,7 @@ export default function LandingPage() {
           
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-6 sm:mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
             Monitor your LEGO sets like investments. Scan barcodes, track market prices, 
-            and get alerts when values change. Built for serious collectors.
+            and get alerts when values change. Available on iOS and Android.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
@@ -85,7 +85,7 @@ export default function LandingPage() {
                 className="flex items-center justify-center gap-2 sm:gap-3"
               >
                 <Download className="h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-300 group-hover:animate-bounce-gentle" />
-                Download on App Store
+                Download App
               </a>
             </Button>
           </div>
@@ -493,7 +493,7 @@ export default function LandingPage() {
                 Ready to Track Your Collection?
               </h2>
               <CardDescription className="text-white/90 text-base sm:text-lg md:text-lg mb-2">
-                Download BrickCheck on the App Store and start monitoring your LEGO investments today.
+                Download BrickCheck on the App Store or Google Play and start monitoring your LEGO investments today.
               </CardDescription>
               <CardDescription className="text-white/80 text-sm sm:text-base">
                 Join thousands of LEGO collectors who use BrickCheck to track, monitor, and optimize their collections.
@@ -512,7 +512,7 @@ export default function LandingPage() {
                   className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3"
                 >
                   <Download className="h-5 w-5 sm:h-6 sm:w-6 transition-transform duration-300 animate-bounce-gentle" />
-                  Download on App Store
+                  Download Now
                 </a>
               </Button>
             </CardContent>
@@ -546,7 +546,7 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold mb-3 sm:mb-4 text-sm sm:text-base">Download</h4>
               <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-                Available now on the App Store for iPhone and iPad.
+                Available now on the App Store for iPhone and iPad, and Google Play for Android devices.
               </p>
               <Button 
                 asChild 
@@ -561,7 +561,7 @@ export default function LandingPage() {
                   className="flex items-center justify-center sm:justify-start gap-1 sm:gap-2"
                 >
                   <Download className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 animate-bounce-gentle" />
-                  App Store
+                  Download
                 </a>
               </Button>
             </div>

@@ -5,15 +5,15 @@ const config: CapacitorConfig = {
   appName: 'BrickCheck',
   webDir: 'out',
   server: {
-    // For production: Load web app from Vercel (API routes work via server)
-    // For development: Uncomment the url below to use local server
-    // url: 'http://localhost:3000',
-    // cleartext: true,
+    // DEVELOPMENT: Use local server (default for local testing)
+    // To switch to production, change the url below to: 'https://www.brickcheck.app'
+    // and remove or set cleartext to false
+    url: 'http://localhost:3000',
+    cleartext: true,
     
-    // Production URL - mobile app loads from here
-    url: 'https://www.brickcheck.app',
-    androidScheme: 'https',
-    iosScheme: 'https',
+    // PRODUCTION (commented out - uncomment for production builds):
+    // url: 'https://www.brickcheck.app',
+    // cleartext: false,
   },
   plugins: {
     Camera: {
