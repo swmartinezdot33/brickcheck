@@ -111,50 +111,27 @@ export class BrickLinkProvider implements PriceProvider {
 
   async getPrices(setNumber: string, condition: 'SEALED' | 'USED'): Promise<PriceData[]> {
     try {
-      // BrickLink uses item type and item ID
-      // For sets, item_type is 'SET' and item_id is the set number
-      const itemType = 'SET'
-      const itemId = setNumber
+      // BrickLink API: /items/{type}/{no}/price_guide
+      // For sets, type is 'SET' and no is the set number
       const guideType = condition === 'SEALED' ? 'sold' : 'stock' // Use 'sold' for sealed, 'stock' for used
 
-      const data = await this.makeRequest('/items/SET/price_guide', {
-        item_no: itemId,
+      const data = await this.makeRequest(`/items/SET/${setNumber}/price_guide`, {
         guide_type: guideType,
         new_or_used: condition === 'SEALED' ? 'N' : 'U',
         currency_code: 'USD',
       })
 
-      if (!data.data || !Array.isArray(data.data.entries)) {
+      if (!data || !data.data) {
         return []
       }
 
-      const entries = data.data.entries
+      // BrickLink returns a single summary object, not entries
+      const summary = data.data
       const prices: PriceData[] = []
 
-      // Get price guide data
-      if (entries.length > 0) {
-        // Use the most recent entries or average
-        entries.slice(0, 10).forEach((entry: any) => {
-          const priceCents = Math.round((entry.unit_price || 0) * 100)
-          if (priceCents > 0) {
-            prices.push({
-              priceCents,
-              currency: 'USD',
-              timestamp: entry.date_ordered || new Date().toISOString(),
-              condition,
-              sampleSize: entry.quantity || 1,
-              variance: entry.unit_price ? entry.unit_price * 0.1 : undefined,
-              metadata: entry,
-            })
-          }
-        })
-      }
-
-      // If no entries, try to use price guide summary
-      if (prices.length === 0 && data.data.summary) {
-        const summary = data.data.summary
-        const avgPrice = summary.avg_price || summary.min_price || summary.max_price
-        if (avgPrice) {
+      if (summary.avg_price || summary.max_price || summary.min_price) {
+        const avgPrice = summary.avg_price || (summary.max_price + summary.min_price) / 2
+        if (avgPrice && avgPrice > 0) {
           prices.push({
             priceCents: Math.round(avgPrice * 100),
             currency: 'USD',
