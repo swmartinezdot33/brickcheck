@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Set } from '@/types'
+import { Set, Collection } from '@/types'
+import { useSearchParams } from 'next/navigation'
 
 interface AddItemModalProps {
   open: boolean
@@ -30,12 +31,47 @@ interface AddItemModalProps {
 
 export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModalProps) {
   const queryClient = useQueryClient()
+  const searchParams = useSearchParams()
+  const defaultCollectionId = searchParams.get('collectionId')
+
   const [condition, setCondition] = useState<'SEALED' | 'USED'>('SEALED')
   const [conditionGrade, setConditionGrade] = useState<string>('')
   const [quantity, setQuantity] = useState(1)
   const [acquisitionCost, setAcquisitionCost] = useState('')
   const [acquisitionDate, setAcquisitionDate] = useState('')
   const [notes, setNotes] = useState('')
+  const [collectionId, setCollectionId] = useState<string>('')
+  const [collections, setCollections] = useState<Collection[]>([])
+
+  useEffect(() => {
+    if (open) {
+      fetchCollections()
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (defaultCollectionId) {
+      setCollectionId(defaultCollectionId)
+    } else if (collections.length > 0 && !collectionId) {
+      setCollectionId(collections[0].id)
+    }
+  }, [defaultCollectionId, collections, collectionId])
+
+  const fetchCollections = async () => {
+    try {
+      const res = await fetch('/api/collections')
+      if (res.ok) {
+        const data = await res.json()
+        setCollections(data)
+        // If we don't have a selection yet (and no URL param), default to first one
+        if (!collectionId && !defaultCollectionId && data.length > 0) {
+          setCollectionId(data[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch collections', error)
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
@@ -71,19 +107,31 @@ export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!set || !set.id) {
-      console.error('Set or set.id is missing:', set)
+    // We allow set.id to be a temp ID now, the backend will handle it
+    if (!set) {
+      console.error('Set is missing:', set)
       return
     }
 
+    if (!collectionId) {
+      // Should not happen if we have collections, but handle it
+      console.error('No collection selected')
+      return
+    }
+
+    // Pass the ID we have (either UUID or temp-XXXX)
+    const setIdToUse = set.id || `temp-${set.set_number}`;
+
     console.log('Submitting collection item:', {
-      set_id: set.id,
+      set_id: setIdToUse,
+      collection_id: collectionId,
       condition,
       quantity,
     })
 
     mutation.mutate({
-      set_id: set.id,
+      set_id: setIdToUse,
+      collection_id: collectionId,
       condition,
       condition_grade: condition === 'USED' && conditionGrade ? conditionGrade : null,
       quantity,
@@ -106,6 +154,22 @@ export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModa
         </DialogHeader>
         {set && (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Collection</Label>
+              <Select value={collectionId} onValueChange={setCollectionId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select collection" />
+                </SelectTrigger>
+                <SelectContent>
+                  {collections.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Condition</Label>
               <Select value={condition} onValueChange={(v) => setCondition(v as 'SEALED' | 'USED')}>
@@ -189,7 +253,7 @@ export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModa
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={mutation.isPending || !collectionId}>
                 {mutation.isPending ? 'Adding...' : 'Add to Collection'}
               </Button>
             </div>
@@ -199,4 +263,3 @@ export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModa
     </Dialog>
   )
 }
-

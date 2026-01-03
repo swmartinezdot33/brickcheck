@@ -33,10 +33,23 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['set_identifiers']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['set_identifiers']['Insert']>
       }
+      collections: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['collections']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['collections']['Insert']>
+      }
       user_collection_items: {
         Row: {
           id: string
           user_id: string
+          collection_id: string | null
           set_id: string
           condition: 'SEALED' | 'USED'
           condition_grade: string | null
@@ -107,6 +120,7 @@ export type Database = {
 // Application types
 export type Set = Database['public']['Tables']['sets']['Row']
 export type SetIdentifier = Database['public']['Tables']['set_identifiers']['Row']
+export type Collection = Database['public']['Tables']['collections']['Row']
 export type CollectionItem = Database['public']['Tables']['user_collection_items']['Row']
 export type CollectionItemWithSet = CollectionItem & { sets: Set | null }
 export type PriceSnapshot = Database['public']['Tables']['price_snapshots']['Row']
@@ -116,4 +130,3 @@ export type AlertEvent = Database['public']['Tables']['alert_events']['Row']
 export type Condition = 'SEALED' | 'USED'
 export type AlertType = 'THRESHOLD' | 'PERCENT_CHANGE'
 export type AlertDirection = 'ABOVE' | 'BELOW' | 'EITHER'
-

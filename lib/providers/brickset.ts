@@ -169,9 +169,27 @@ export class BricksetProvider implements CatalogProvider {
 
   async getSetByNumber(setNumber: string): Promise<SetMetadata | null> {
     try {
-      const data = await this.makeRequest('getSets', {
+      // 1. Try exact match first
+      let data = await this.makeRequest('getSets', {
         setNumber: setNumber,
       })
+
+      // 2. If no results, and setNumber doesn't have a variant, try appending '-1'
+      if ((!data.sets || data.sets.length === 0) && !setNumber.includes('-')) {
+        console.log(`[BricksetProvider] No exact match for ${setNumber}, trying ${setNumber}-1`)
+        data = await this.makeRequest('getSets', {
+          setNumber: `${setNumber}-1`,
+        })
+      }
+
+      // 3. If still no results, try using 'query' instead of 'setNumber'
+      if (!data.sets || data.sets.length === 0) {
+        console.log(`[BricksetProvider] No match by setNumber for ${setNumber}, trying query`)
+        data = await this.makeRequest('getSets', {
+          query: setNumber,
+          pageSize: '1'
+        })
+      }
 
       if (!data.sets || !Array.isArray(data.sets) || data.sets.length === 0) {
         return null
