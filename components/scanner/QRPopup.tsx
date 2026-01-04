@@ -125,5 +125,3 @@ export function QRPopup({ setInfo, position, onOpen, onAdd, containerWidth, cont
     </AnimatePresence>
   )
 }
-
-

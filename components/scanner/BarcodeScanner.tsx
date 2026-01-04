@@ -140,6 +140,7 @@ export function BarcodeScanner({
 
   const startScanning = async () => {
     try {
+      console.log('[Scanner] Starting scanner...')
       setError(null)
       setIsScanning(true)
       setDetectedCodes(new Map())
@@ -148,6 +149,8 @@ export function BarcodeScanner({
       if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
         throw new Error('Camera access requires HTTPS. Please use the production URL.')
       }
+      
+      console.log('[Scanner] Requesting camera access...')
 
       // Use BrowserQRCodeReader for better QR code detection
       // This is more reliable than BrowserMultiFormatReader with restricted formats
@@ -273,6 +276,22 @@ export function BarcodeScanner({
         selectedDeviceId,
         videoRef.current,
         (result, err) => {
+          if (err) {
+            // Log errors for debugging (but not too frequently)
+            const errName = err && typeof err === 'object' && 'name' in err ? (err as { name: string }).name : ''
+            if (errName === 'NotFoundException' || errName === 'NoBarcodeDetectedException') {
+              // This is normal - log occasionally to see detection attempts
+              if (Math.random() < 0.01) {
+                console.debug('[Scanner] 🔍 Scanning for QR codes...')
+              }
+            } else if (errName) {
+              // Log other errors for debugging
+              const errMessage = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : ''
+              console.warn('[Scanner] ⚠️  Detection error:', errName, errMessage?.substring(0, 100))
+            }
+            return
+          }
+          
           if (result) {
             const format = result.getBarcodeFormat()
             const code = result.getText().trim()
@@ -292,6 +311,7 @@ export function BarcodeScanner({
             if (cleanCode && cleanCode.length > 0) {
               // Call onScan callback immediately when QR code is detected
               if (onScan) {
+                console.log('[Scanner] Calling onScan callback with code:', cleanCode.substring(0, 50))
                 onScan(cleanCode)
               }
               
@@ -384,14 +404,16 @@ export function BarcodeScanner({
           }
           if (err) {
             // Log errors for debugging (but not too frequently)
-            if (err.name === 'NotFoundException' || err.name === 'NoBarcodeDetectedException') {
+            const errName = err && typeof err === 'object' && 'name' in err ? (err as { name: string }).name : ''
+            if (errName === 'NotFoundException' || errName === 'NoBarcodeDetectedException') {
               // This is normal - log occasionally to see detection attempts
               if (Math.random() < 0.01) {
                 console.debug('[Scanner] 🔍 Scanning for QR codes...')
               }
-            } else {
+            } else if (errName) {
               // Log other errors for debugging
-              console.warn('[Scanner] ⚠️  Detection error:', err.name, err.message?.substring(0, 100))
+              const errMessage = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : ''
+              console.warn('[Scanner] ⚠️  Detection error:', errName, errMessage?.substring(0, 100))
             }
           }
         }
@@ -447,6 +469,24 @@ export function BarcodeScanner({
     window.addEventListener('resize', checkFullScreen)
     return () => window.removeEventListener('resize', checkFullScreen)
   }, [])
+
+  // Auto-start scanner on mobile (fullscreen mode)
+  useEffect(() => {
+    if (isFullScreen && !isScanning && !error) {
+      console.log('[Scanner] Auto-starting scanner on mobile...')
+      // Use setTimeout to avoid calling startScanning during render
+      const timer = setTimeout(() => {
+        startScanning().catch((err) => {
+          console.error('[Scanner] Auto-start failed:', err)
+          if (onError) {
+            onError(err instanceof Error ? err : new Error(String(err)))
+          }
+        })
+      }, 500) // Small delay to ensure component is fully mounted
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFullScreen]) // Only depend on isFullScreen to avoid infinite loops
 
   return (
     <Card className={isFullScreen ? 'border-0 shadow-none h-full flex flex-col' : ''}>
