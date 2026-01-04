@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +23,11 @@ export default function BrowseSetDetailPage({
 }) {
   const { setId } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [addModalOpen, setAddModalOpen] = useState(false)
+
+  // Build back URL with search params if they exist
+  const backUrl = searchParams.toString() ? `/browse?${searchParams.toString()}` : '/browse'
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['set-detail', setId],
@@ -48,7 +52,7 @@ export default function BrowseSetDetailPage({
         <CardContent className="p-12 text-center">
           <p className="text-red-500 mb-4">Failed to load set details</p>
           <Button variant="outline" asChild>
-            <Link href="/browse">
+            <Link href={backUrl}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Browse
             </Link>
@@ -64,7 +68,7 @@ export default function BrowseSetDetailPage({
     <div className="space-y-8">
       <div>
         <Button variant="ghost" className="mb-4" asChild>
-          <Link href="/browse">
+          <Link href={backUrl}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Browse
           </Link>

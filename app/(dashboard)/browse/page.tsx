@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -21,12 +22,32 @@ import { formatCurrency } from '@/lib/utils'
 import { AddItemModal } from '@/components/collection/AddItemModal'
 
 export default function BrowsePage() {
-  const [query, setQuery] = useState('')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [query, setQuery] = useState(searchParams.get('q') || '')
   const [selectedSet, setSelectedSet] = useState<Set | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
-  const [itemsPerPage, setItemsPerPage] = useState(25)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [retiredFilter, setRetiredFilter] = useState<'all' | 'active' | 'retired'>('all')
+  const [itemsPerPage, setItemsPerPage] = useState(parseInt(searchParams.get('perPage') || '25', 10))
+  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1', 10))
+  const [retiredFilter, setRetiredFilter] = useState<'all' | 'active' | 'retired'>((searchParams.get('filter') as 'all' | 'active' | 'retired') || 'all')
+
+  // Update URL when search state changes (debounced to avoid too many updates)
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (query) params.set('q', query)
+    if (itemsPerPage !== 25) params.set('perPage', itemsPerPage.toString())
+    if (currentPage !== 1) params.set('page', currentPage.toString())
+    if (retiredFilter !== 'all') params.set('filter', retiredFilter)
+    
+    const newQueryString = params.toString()
+    const currentQueryString = searchParams.toString()
+    
+    // Only update if query string actually changed
+    if (newQueryString !== currentQueryString) {
+      const newUrl = newQueryString ? `/browse?${newQueryString}` : '/browse'
+      router.replace(newUrl, { scroll: false })
+    }
+  }, [query, itemsPerPage, currentPage, retiredFilter, router, searchParams])
 
   // Real-time search as user types (debounced by React Query)
   const { data, isLoading, error } = useQuery({
@@ -292,7 +313,7 @@ export default function BrowsePage() {
                         Add to Collection
                       </Button>
                       <Button className="flex-1" variant="outline" asChild>
-                        <Link href={`/browse/${set.id || set.set_number}`}>
+                        <Link href={`/browse/${set.id || set.set_number}?${searchParams.toString()}`}>
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Details
                         </Link>

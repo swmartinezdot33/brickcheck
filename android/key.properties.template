@@ -1,0 +1,8 @@
+# Android Signing Configuration
+# Copy this file to android/key.properties and fill in your passwords
+# This template file can be committed, but key.properties should NOT be committed
+
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=brickcheck
+storeFile=../brickcheck-release.keystore

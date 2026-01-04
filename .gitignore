@@ -57,3 +57,4 @@ android/.DS_Store
 *.jks
 *.keystore
 .env*.local
+android/key.properties
