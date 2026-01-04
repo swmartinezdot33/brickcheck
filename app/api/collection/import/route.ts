@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
     // Import sets
     const catalogProvider = getCatalogProvider()
     let importedCount = 0
+    let skippedCount = 0
     let errorCount = 0
     const maxSetsToImport = 500 // Limit to prevent timeouts
 
@@ -272,28 +273,23 @@ export async function POST(request: NextRequest) {
           .maybeSingle()
 
         if (existing) {
-          // Update quantity if it exists
-          await supabase
-            .from('user_collection_items')
-            .update({
-              quantity: setData.quantity || 1,
-              condition: setData.condition || 'SEALED',
-            })
-            .eq('id', existing.id)
-          importedCount++
-        } else {
-          // Create new collection item
-          await supabase
-            .from('user_collection_items')
-            .insert({
-              user_id: user.id,
-              set_id: dbSet.id,
-              collection_id: targetCollectionId,
-              condition: setData.condition || 'SEALED',
-              quantity: setData.quantity || 1,
-            })
-          importedCount++
+          // Skip if already exists - preserve existing data
+          console.log(`Set ${setData.set_number} already exists in collection, skipping`)
+          skippedCount++
+          continue
         }
+
+        // Create new collection item
+        await supabase
+          .from('user_collection_items')
+          .insert({
+            user_id: user.id,
+            set_id: dbSet.id,
+            collection_id: targetCollectionId,
+            condition: setData.condition || 'SEALED',
+            quantity: setData.quantity || 1,
+          })
+        importedCount++
       } catch (error) {
         console.error(`Error importing set ${setData.set_number}:`, error)
         errorCount++
@@ -303,12 +299,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       importedCount,
+      skippedCount,
       errorCount,
       total: setsToImport.length,
       limitedTo: maxSetsToImport,
       message: setsToImport.length > maxSetsToImport 
-        ? `Imported ${importedCount} of ${setsToImport.length} sets (limited to ${maxSetsToImport})`
-        : `Successfully imported ${importedCount} sets`
+        ? `Imported ${importedCount} sets, skipped ${skippedCount} duplicates, ${errorCount} not found`
+        : `Imported ${importedCount} sets, skipped ${skippedCount} duplicates${errorCount > 0 ? `, ${errorCount} not found` : ''}`
     })
   } catch (error) {
     console.error('Error importing collection:', error)

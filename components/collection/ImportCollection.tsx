@@ -359,10 +359,11 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
             <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg text-green-600 dark:text-green-400">
               <CheckCircle2 className="h-5 w-5 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="font-medium">Import successful!</p>
+                <p className="font-medium">Import complete!</p>
                 <p className="text-sm">
-                  {importMutation.data?.importedCount || 0} sets imported
-                  {importMutation.data?.errorCount > 0 && ` (${importMutation.data.errorCount} not found)`}
+                  {importMutation.data?.importedCount || 0} new sets added
+                  {importMutation.data?.skippedCount > 0 && ` • ${importMutation.data.skippedCount} skipped (already exists)`}
+                  {importMutation.data?.errorCount > 0 && ` • ${importMutation.data.errorCount} not found`}
                 </p>
                 {importMutation.data?.message && (
                   <p className="text-xs mt-1 opacity-75">{importMutation.data.message}</p>
