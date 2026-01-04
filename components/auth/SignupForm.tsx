@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,8 +54,21 @@ export function SignupForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Create Account</CardTitle>
-        <CardDescription>Start tracking your LEGO collection value</CardDescription>
+        <div className="flex flex-col items-center mb-4">
+          <Image
+            src="/BrickCheck Logo.png"
+            alt="BrickCheck"
+            width={80}
+            height={80}
+            className="mb-3"
+            priority
+          />
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+            BrickCheck
+          </h1>
+        </div>
+        <CardTitle className="text-center">Create Account</CardTitle>
+        <CardDescription className="text-center">Start tracking your LEGO collection value</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSignup} className="space-y-4">

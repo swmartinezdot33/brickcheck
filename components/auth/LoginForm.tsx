@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,8 +39,21 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Sign In</CardTitle>
-        <CardDescription>Enter your credentials to access your collection</CardDescription>
+        <div className="flex flex-col items-center mb-4">
+          <Image
+            src="/BrickCheck Logo.png"
+            alt="BrickCheck"
+            width={80}
+            height={80}
+            className="mb-3"
+            priority
+          />
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+            BrickCheck
+          </h1>
+        </div>
+        <CardTitle className="text-center">Sign In</CardTitle>
+        <CardDescription className="text-center">Enter your credentials to access your collection</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { BrowserQRCodeReader, BarcodeFormat } from '@zxing/library'
+import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Camera, CameraOff, ScanLine } from 'lucide-react'
@@ -9,13 +10,13 @@ import { QRPopup } from './QRPopup'
 import { useRouter } from 'next/navigation'
 
 interface DetectedCode {
-  id: string // Unique ID for this code (code + format)
+  id: string
   code: string
   format: BarcodeFormat
-  x: number // Center X coordinate (0-1 normalized)
-  y: number // Center Y coordinate (0-1 normalized)
-  width: number // Width (0-1 normalized)
-  height: number // Height (0-1 normalized)
+  x: number
+  y: number
+  width: number
+  height: number
   timestamp: number
   setInfo?: {
     name: string
@@ -25,6 +26,21 @@ interface DetectedCode {
     year?: number
   } | null
 }
+
+// Type definition for native BarcodeDetector API
+interface BarcodeDetector {
+  detect(image: ImageBitmapSource): Promise<DetectedBarcode[]>
+}
+
+interface DetectedBarcode {
+  format: string
+  rawValue: string
+  boundingBox: DOMRectReadOnly
+  cornerPoints: ReadonlyArray<{ x: number; y: number }>
+}
+
+// Check if native BarcodeDetector API is available
+const isBarcodeDetectorSupported = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
 export function BarcodeScanner({
   onScan,
@@ -36,17 +52,18 @@ export function BarcodeScanner({
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
+  const barcodeDetectorRef = useRef<BarcodeDetector | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const [detectedCodes, setDetectedCodes] = useState<Map<string, DetectedCode>>(new Map())
   const pruningIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
-
-  // Format display names
-  const getFormatName = (format: BarcodeFormat): string => {
-    return format === BarcodeFormat.QR_CODE ? 'QR Code' : format.toString()
-  }
+  const [detectionMethod, setDetectionMethod] = useState<string>('initializing')
 
   // Update container size on resize
   useEffect(() => {
@@ -64,7 +81,7 @@ export function BarcodeScanner({
     return () => window.removeEventListener('resize', updateSize)
   }, [])
 
-  // Prune stale codes (not seen for > 500ms for faster updates)
+  // Prune stale codes
   useEffect(() => {
     if (isScanning) {
       pruningIntervalRef.current = setInterval(() => {
@@ -80,7 +97,7 @@ export function BarcodeScanner({
           }
           return changed ? updated : prev
         })
-      }, 200) // Check every 200ms
+      }, 200)
     } else {
       if (pruningIntervalRef.current) {
         clearInterval(pruningIntervalRef.current)
@@ -95,29 +112,16 @@ export function BarcodeScanner({
     }
   }, [isScanning])
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Cleanup on unmount
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset()
-      }
-      if (pruningIntervalRef.current) {
-        clearInterval(pruningIntervalRef.current)
-      }
+      stopScanning()
     }
   }, [])
 
-  // Note: Coordinates are already normalized to 0-1 range based on video source dimensions
-  // The video element uses object-cover which maintains aspect ratio, so normalized
-  // coordinates should map correctly to the display
-
-  // Lookup set information for a detected QR code
+  // Lookup set information
   const lookupSetInfo = async (code: string, format: BarcodeFormat): Promise<DetectedCode['setInfo'] | null> => {
     try {
-      // BrowserQRCodeReader only returns QR codes
-      // QR codes from LEGO typically contain URLs with set numbers
-      
-      // For QR codes (which should be URLs or set numbers), try scanLookup
       const res = await fetch(`/api/scanLookup?code=${encodeURIComponent(code)}`)
       if (res.ok) {
         const data = await res.json()
@@ -138,288 +142,314 @@ export function BarcodeScanner({
     }
   }
 
-  const startScanning = async () => {
-    try {
-      console.log('[Scanner] Starting scanner...')
-      setError(null)
-      setIsScanning(true)
-      setDetectedCodes(new Map())
+  // Process detected code
+  const processDetectedCode = useCallback((code: string, boundingBox?: DOMRectReadOnly, format: BarcodeFormat = BarcodeFormat.QR_CODE) => {
+    if (!code || code.trim().length === 0) return
 
-      // Check if we're on HTTPS (required for camera access)
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        throw new Error('Camera access requires HTTPS. Please use the production URL.')
-      }
-      
-      console.log('[Scanner] Requesting camera access...')
+    const cleanCode = code.trim()
+    const codeId = `${cleanCode}_${format}`
+    const now = Date.now()
 
-      // Use BrowserQRCodeReader for better QR code detection
-      // This is more reliable than BrowserMultiFormatReader with restricted formats
-      const codeReader = new BrowserQRCodeReader()
-      codeReaderRef.current = codeReader
-      
-      console.log('[Scanner] ✅ Using QR code reader (QR codes only)')
-
-      // Get available video input devices
-      const videoInputDevices = await codeReader.listVideoInputDevices()
-
-      if (videoInputDevices.length === 0) {
-        throw new Error('No camera devices found. Please check your camera permissions.')
+    // Check if we already have this code
+    setDetectedCodes((prev) => {
+      const existing = prev.get(codeId)
+      if (existing && now - existing.timestamp < 100) {
+        // Already processed recently, skip
+        return prev
       }
 
-      // Prefer back camera on mobile, but use any available camera on desktop
-      let selectedDeviceId = videoInputDevices[0].deviceId
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      
-      if (isMobile) {
-        // On mobile, prefer back camera (environment)
-        const backCamera = videoInputDevices.find(
-          (device) => device.label.toLowerCase().includes('back') || 
-                      device.label.toLowerCase().includes('rear') ||
-                      device.label.toLowerCase().includes('environment')
-        )
-        if (backCamera) {
-          selectedDeviceId = backCamera.deviceId
-        }
-      } else {
-        // On desktop, prefer the first non-virtual camera (webcams usually come first)
-        const webcam = videoInputDevices.find(
-          (device) => !device.label.toLowerCase().includes('virtual') &&
-                      !device.label.toLowerCase().includes('screen')
-        )
-        if (webcam) {
-          selectedDeviceId = webcam.deviceId
-        }
+      const video = videoRef.current
+      if (!video) return prev
+
+      const videoWidth = video.videoWidth || 1280
+      const videoHeight = video.videoHeight || 720
+
+      // Calculate normalized coordinates
+      let centerX = 0.5
+      let centerY = 0.5
+      let width = 0.1
+      let height = 0.1
+
+      if (boundingBox) {
+        centerX = (boundingBox.x + boundingBox.width / 2) / videoWidth
+        centerY = (boundingBox.y + boundingBox.height / 2) / videoHeight
+        width = boundingBox.width / videoWidth
+        height = boundingBox.height / videoHeight
       }
 
-      if (!videoRef.current) {
-        throw new Error('Video element not found')
-      }
+      const updated = new Map(prev)
+      const existingCode = updated.get(codeId)
 
-      // Request camera permissions explicitly
-      try {
-        let constraints: MediaStreamConstraints
-        
-        if (isMobile) {
-          // On mobile, use facingMode
-          constraints = {
-            video: {
-              facingMode: 'environment', // Back camera on mobile
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          }
-        } else {
-          // On desktop, use deviceId (prefer specific device, fallback to default)
-          constraints = {
-            video: {
-              deviceId: { ideal: selectedDeviceId }, // Prefer specific device
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          }
-        }
-        
-        let stream: MediaStream
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints)
-        } catch (deviceError) {
-          // If deviceId fails on desktop, try without it (fallback to default camera)
-          if (!isMobile) {
-            console.warn('Failed with specific device, trying default camera:', deviceError)
-            constraints = {
-              video: {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-              },
+      // Only lookup if we don't have info yet
+      if (!existingCode || !existingCode.setInfo) {
+        lookupSetInfo(cleanCode, format).then((setInfo) => {
+          setDetectedCodes((prev) => {
+            const updated = new Map(prev)
+            const code = updated.get(codeId)
+            if (code) {
+              updated.set(codeId, { ...code, setInfo: setInfo || null })
             }
-            stream = await navigator.mediaDevices.getUserMedia(constraints)
-          } else {
-            throw deviceError
-          }
-        }
-        
-        // Set the stream to the video element
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          // Wait for video to be ready before starting decode
-          await new Promise((resolve) => {
-            if (videoRef.current) {
-              videoRef.current.onloadedmetadata = () => {
-                resolve(undefined)
-              }
-            }
+            return updated
           })
-        }
-      } catch (permError) {
-        console.error('Camera access error:', permError)
-        if (permError instanceof Error) {
-          if (permError.name === 'NotAllowedError' || permError.name === 'PermissionDeniedError') {
-            throw new Error('Camera permission denied. Please allow camera access in your browser settings and try again.')
-          } else if (permError.name === 'NotFoundError' || permError.name === 'DevicesNotFoundError') {
-            throw new Error('No camera found. Please connect a camera and try again.')
-          } else if (permError.name === 'NotReadableError' || permError.name === 'TrackStartError') {
-            throw new Error('Camera is already in use by another application. Please close other apps using the camera.')
+          if (setInfo) {
+            console.log(`[Scanner] ✅ Set found: ${setInfo.name} (#${setInfo.setNumber})`)
           }
-        }
-        throw new Error(`Camera access failed: ${permError instanceof Error ? permError.message : 'Unknown error'}`)
-      }
-
-      // Ensure video is playing before starting decode
-      if (videoRef.current) {
-        videoRef.current.play().catch((err) => {
-          console.warn('Video play failed:', err)
+        }).catch((err) => {
+          console.error('Set lookup failed:', err)
+          setDetectedCodes((prev) => {
+            const updated = new Map(prev)
+            const code = updated.get(codeId)
+            if (code) {
+              updated.set(codeId, { ...code, setInfo: null })
+            }
+            return updated
+          })
         })
       }
 
-      // Start continuous decoding - don't auto-confirm
+      updated.set(codeId, {
+        id: codeId,
+        code: cleanCode,
+        format,
+        x: centerX,
+        y: centerY,
+        width: Math.max(width, 0.1),
+        height: Math.max(height, 0.05),
+        timestamp: now,
+        setInfo: existingCode?.setInfo,
+      })
+
+      // Call onScan callback
+      if (onScan) {
+        onScan(cleanCode)
+      }
+
+      return updated
+    })
+  }, [onScan])
+
+  // Native BarcodeDetector scanning (most modern and fastest)
+  const scanWithBarcodeDetector = useCallback(() => {
+    if (!videoRef.current || !barcodeDetectorRef.current || !isScanning) return
+
+    const video = videoRef.current
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return
+
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    barcodeDetectorRef.current
+      .detect(canvas)
+      .then((barcodes) => {
+        for (const barcode of barcodes) {
+          if (barcode.format === 'qr_code' && barcode.rawValue) {
+            console.log(`[Scanner] ✅ Native API detected QR: ${barcode.rawValue.substring(0, 50)}`)
+            processDetectedCode(barcode.rawValue, barcode.boundingBox, BarcodeFormat.QR_CODE)
+          }
+        }
+      })
+      .catch((err) => {
+        // Silently handle detection errors (normal when no code present)
+        if (err.name !== 'NotFoundError') {
+          console.debug('[Scanner] BarcodeDetector error:', err)
+        }
+      })
+
+    if (isScanning) {
+      animationFrameRef.current = requestAnimationFrame(scanWithBarcodeDetector)
+    }
+  }, [isScanning, processDetectedCode])
+
+  // Start scanning with native BarcodeDetector
+  const startBarcodeDetector = useCallback(async (stream: MediaStream) => {
+    try {
+      // Check if BarcodeDetector is supported
+      if (!isBarcodeDetectorSupported) {
+        throw new Error('BarcodeDetector not supported')
+      }
+
+      // Create BarcodeDetector instance
+      const BarcodeDetectorConstructor = (window as any).BarcodeDetector as new (options?: { formats: string[] }) => BarcodeDetector
+      const detector = new BarcodeDetectorConstructor({
+        formats: ['qr_code']
+      })
+      barcodeDetectorRef.current = detector
+
+      setDetectionMethod('Native BarcodeDetector API')
+      console.log('[Scanner] 🚀 Using Native BarcodeDetector API (fastest)')
+
+      // Start scanning loop
+      scanWithBarcodeDetector()
+    } catch (err) {
+      console.warn('[Scanner] BarcodeDetector failed, falling back:', err)
+      throw err
+    }
+  }, [scanWithBarcodeDetector])
+
+  // Start scanning with html5-qrcode
+  const startHtml5QrCode = useCallback(async (stream: MediaStream) => {
+    try {
+      const video = videoRef.current
+      if (!video) throw new Error('Video element not found')
+
+      const html5QrCode = new Html5Qrcode('qr-scanner-container', {
+        verbose: false,
+      })
+
+      html5QrCodeRef.current = html5QrCode
+
+      setDetectionMethod('html5-qrcode')
+      console.log('[Scanner] 🔄 Using html5-qrcode library')
+
+      // Start scanning
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          console.log(`[Scanner] ✅ html5-qrcode detected: ${decodedText.substring(0, 50)}`)
+          processDetectedCode(decodedText, undefined, BarcodeFormat.QR_CODE)
+        },
+        (errorMessage) => {
+          // Ignore normal scanning errors
+        }
+      )
+    } catch (err) {
+      console.warn('[Scanner] html5-qrcode failed, falling back:', err)
+      throw err
+    }
+  }, [processDetectedCode])
+
+  // Start scanning with ZXing (fallback)
+  const startZXing = useCallback(async (stream: MediaStream, deviceId: string) => {
+    try {
+      const codeReader = new BrowserQRCodeReader()
+      codeReaderRef.current = codeReader
+
+      setDetectionMethod('ZXing Library')
+      console.log('[Scanner] 📚 Using ZXing library (fallback)')
+
+      const video = videoRef.current
+      if (!video) throw new Error('Video element not found')
+
       codeReader.decodeFromVideoDevice(
-        selectedDeviceId,
-        videoRef.current,
+        deviceId,
+        video,
         (result, err) => {
           if (err) {
-            // Log errors for debugging (but not too frequently)
             const errName = err && typeof err === 'object' && 'name' in err ? (err as { name: string }).name : ''
-            if (errName === 'NotFoundException' || errName === 'NoBarcodeDetectedException') {
-              // This is normal - log occasionally to see detection attempts
-              if (Math.random() < 0.01) {
-                console.debug('[Scanner] 🔍 Scanning for QR codes...')
-              }
-            } else if (errName) {
-              // Log other errors for debugging
-              const errMessage = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : ''
-              console.warn('[Scanner] ⚠️  Detection error:', errName, errMessage?.substring(0, 100))
+            if (errName !== 'NotFoundException' && errName !== 'NoBarcodeDetectedException') {
+              console.debug('[Scanner] ZXing error:', errName)
             }
             return
           }
-          
+
           if (result) {
             const format = result.getBarcodeFormat()
             const code = result.getText().trim()
-            
-            // BrowserQRCodeReader only returns QR codes, but verify anyway
-            if (format !== BarcodeFormat.QR_CODE) {
-              console.warn(`[Scanner] ⚠️  Unexpected format from QR reader: ${format}`)
-              return
-            }
-            
-            // Log QR code detection
-            console.log(`[Scanner] ✅ QR Code detected: ${code.substring(0, 100)}`)
-            
-            // Preserve the full text (may contain URLs)
-            const cleanCode = code
 
-            if (cleanCode && cleanCode.length > 0) {
-              // Call onScan callback immediately when QR code is detected
-              if (onScan) {
-                console.log('[Scanner] Calling onScan callback with code:', cleanCode.substring(0, 50))
-                onScan(cleanCode)
-              }
+            if (format === BarcodeFormat.QR_CODE && code) {
+              console.log(`[Scanner] ✅ ZXing detected: ${code.substring(0, 50)}`)
               
-              // Get result points (corners of the barcode)
+              // Get bounding box from result points
               const resultPoints = result.getResultPoints()
-              
+              let boundingBox: DOMRectReadOnly | undefined
+
               if (resultPoints && resultPoints.length >= 2) {
-                // Calculate bounding box from result points
-                let minX = Infinity
-                let maxX = -Infinity
-                let minY = Infinity
-                let maxY = -Infinity
-
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
                 for (const point of resultPoints) {
-                  const x = point.getX()
-                  const y = point.getY()
-                  minX = Math.min(minX, x)
-                  maxX = Math.max(maxX, x)
-                  minY = Math.min(minY, y)
-                  maxY = Math.max(maxY, y)
+                  minX = Math.min(minX, point.getX())
+                  maxX = Math.max(maxX, point.getX())
+                  minY = Math.min(minY, point.getY())
+                  maxY = Math.max(maxY, point.getY())
                 }
-
-                // Get video dimensions for normalization
-                const video = videoRef.current
-                if (video) {
-                  const videoWidth = video.videoWidth || 1280
-                  const videoHeight = video.videoHeight || 720
-
-                  // Normalize coordinates to 0-1 range
-                  const centerX = ((minX + maxX) / 2) / videoWidth
-                  const centerY = ((minY + maxY) / 2) / videoHeight
-                  const width = (maxX - minX) / videoWidth
-                  const height = (maxY - minY) / videoHeight
-
-                  // Create unique ID for this code
-                  const codeId = `${cleanCode}_${format}`
-
-                  // Update detected codes
-                  setDetectedCodes((prev) => {
-                    const updated = new Map(prev)
-                    const existingCode = prev.get(codeId)
-                    
-                    // Only lookup set info if this is a new detection or we don't have info yet
-                    if (!existingCode || !existingCode.setInfo) {
-                      // Async lookup set information
-                      lookupSetInfo(cleanCode, format).then((setInfo) => {
-                        setDetectedCodes((prev) => {
-                          const updated = new Map(prev)
-                          const code = updated.get(codeId)
-                          if (code) {
-                            updated.set(codeId, { ...code, setInfo: setInfo || null })
-                          }
-                          return updated
-                        })
-                        if (setInfo) {
-                          console.log(`[Scanner] ✅ Set found: ${setInfo.name} (#${setInfo.setNumber})`)
-                        } else {
-                          console.warn(`[Scanner] ⚠️ QR code detected but no set found: ${cleanCode.substring(0, 50)}`)
-                        }
-                      }).catch((err) => {
-                        // Log error for debugging
-                        console.error('Set lookup failed for code:', cleanCode, err)
-                        setDetectedCodes((prev) => {
-                          const updated = new Map(prev)
-                          const code = updated.get(codeId)
-                          if (code) {
-                            updated.set(codeId, { ...code, setInfo: null })
-                          }
-                          return updated
-                        })
-                      })
-                    }
-                    
-                    updated.set(codeId, {
-                      id: codeId,
-                      code: cleanCode,
-                      format: format, // Store as BarcodeFormat enum
-                      x: centerX,
-                      y: centerY,
-                      width: Math.max(width, 0.1), // Minimum width for visibility
-                      height: Math.max(height, 0.05), // Minimum height for visibility
-                      timestamp: Date.now(),
-                      setInfo: existingCode?.setInfo, // Preserve existing setInfo if any
-                    })
-                    return updated
-                  })
-                }
+                boundingBox = new DOMRectReadOnly(minX, minY, maxX - minX, maxY - minY)
               }
-            }
-          }
-          if (err) {
-            // Log errors for debugging (but not too frequently)
-            const errName = err && typeof err === 'object' && 'name' in err ? (err as { name: string }).name : ''
-            if (errName === 'NotFoundException' || errName === 'NoBarcodeDetectedException') {
-              // This is normal - log occasionally to see detection attempts
-              if (Math.random() < 0.01) {
-                console.debug('[Scanner] 🔍 Scanning for QR codes...')
-              }
-            } else if (errName) {
-              // Log other errors for debugging
-              const errMessage = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : ''
-              console.warn('[Scanner] ⚠️  Detection error:', errName, errMessage?.substring(0, 100))
+
+              processDetectedCode(code, boundingBox, format)
             }
           }
         }
       )
     } catch (err) {
+      console.error('[Scanner] ZXing failed:', err)
+      throw err
+    }
+  }, [processDetectedCode])
+
+  const startScanning = async () => {
+    try {
+      console.log('[Scanner] 🚀 Starting sophisticated QR scanner...')
+      setError(null)
+      setIsScanning(true)
+      setDetectedCodes(new Map())
+
+      // Check HTTPS
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        throw new Error('Camera access requires HTTPS. Please use the production URL.')
+      }
+
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
+      // Get camera stream with optimal settings
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: isMobile ? 'environment' : 'user',
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          frameRate: { ideal: 30, min: 15 },
+        },
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      streamRef.current = stream
+
+      if (!videoRef.current) {
+        throw new Error('Video element not found')
+      }
+
+      videoRef.current.srcObject = stream
+      await new Promise((resolve) => {
+        if (videoRef.current) {
+          videoRef.current.onloadedmetadata = () => resolve(undefined)
+        }
+      })
+
+      await videoRef.current.play()
+
+      // Try detection methods in order of preference
+      try {
+        // Method 1: Native BarcodeDetector (fastest, most modern)
+        await startBarcodeDetector(stream)
+      } catch (err1) {
+        console.log('[Scanner] Trying html5-qrcode...')
+        try {
+          // Method 2: html5-qrcode (good performance)
+          await startHtml5QrCode(stream)
+        } catch (err2) {
+          console.log('[Scanner] Falling back to ZXing...')
+          // Method 3: ZXing (reliable fallback)
+          const codeReader = new BrowserQRCodeReader()
+          const devices = await codeReader.listVideoInputDevices()
+          const deviceId = devices[0]?.deviceId || 'default'
+          await startZXing(stream, deviceId)
+        }
+      }
+
+      console.log(`[Scanner] ✅ Scanner active using: ${detectionMethod}`)
+    } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start camera')
+      console.error('[Scanner] ❌ Failed to start:', error)
       setError(error.message)
       setIsScanning(false)
       if (onError) {
@@ -429,38 +459,55 @@ export function BarcodeScanner({
   }
 
   const stopScanning = () => {
-    // Clear any scanning intervals
-    if (codeReaderRef.current && (codeReaderRef.current as any).scanInterval) {
-      clearInterval((codeReaderRef.current as any).scanInterval)
+    console.log('[Scanner] 🛑 Stopping scanner...')
+
+    // Stop animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
     }
 
+    // Stop ZXing
     if (codeReaderRef.current) {
-      codeReaderRef.current.reset()
+      try {
+        codeReaderRef.current.reset()
+      } catch (e) {
+        // Ignore reset errors
+      }
       codeReaderRef.current = null
     }
-    
-    // Stop video stream
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach((track) => track.stop())
+
+    // Stop html5-qrcode
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current
+        .stop()
+        .then(() => {
+          html5QrCodeRef.current?.clear()
+        })
+        .catch(() => {
+          // Ignore stop errors
+        })
+      html5QrCodeRef.current = null
+    }
+
+    // Stop stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+    }
+
+    if (videoRef.current) {
       videoRef.current.srcObject = null
     }
-    
+
     setIsScanning(false)
     setDetectedCodes(new Map())
-  }
-
-  const handleCodeClick = (code: DetectedCode) => {
-    console.log('Code selected:', code.code, code.format)
-    stopScanning()
-    onScan(code.code)
+    setDetectionMethod('stopped')
   }
 
   const codesArray = Array.from(detectedCodes.values())
-
-  // Check if we're in full screen mode (mobile) - use state to avoid hydration issues
   const [isFullScreen, setIsFullScreen] = useState(false)
-  
+
   useEffect(() => {
     const checkFullScreen = () => {
       setIsFullScreen(window.innerWidth < 768)
@@ -470,11 +517,9 @@ export function BarcodeScanner({
     return () => window.removeEventListener('resize', checkFullScreen)
   }, [])
 
-  // Auto-start scanner on mobile (fullscreen mode)
+  // Auto-start on mobile
   useEffect(() => {
     if (isFullScreen && !isScanning && !error) {
-      console.log('[Scanner] Auto-starting scanner on mobile...')
-      // Use setTimeout to avoid calling startScanning during render
       const timer = setTimeout(() => {
         startScanning().catch((err) => {
           console.error('[Scanner] Auto-start failed:', err)
@@ -482,20 +527,25 @@ export function BarcodeScanner({
             onError(err instanceof Error ? err : new Error(String(err)))
           }
         })
-      }, 500) // Small delay to ensure component is fully mounted
+      }, 500)
       return () => clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFullScreen]) // Only depend on isFullScreen to avoid infinite loops
+  }, [isFullScreen])
 
   return (
     <Card className={isFullScreen ? 'border-0 shadow-none h-full flex flex-col' : ''}>
       {!isFullScreen && (
         <CardHeader>
           <CardTitle>AR Set Scanner</CardTitle>
-        <CardDescription>
-          Point your camera at QR codes on LEGO boxes to instantly see set details.
-        </CardDescription>
+          <CardDescription>
+            Point your camera at QR codes on LEGO boxes to instantly see set details.
+            {detectionMethod !== 'stopped' && detectionMethod !== 'initializing' && (
+              <span className="block mt-1 text-xs text-muted-foreground">
+                Using: {detectionMethod}
+              </span>
+            )}
+          </CardDescription>
         </CardHeader>
       )}
       <CardContent className={`space-y-4 ${isFullScreen ? 'flex-1 flex flex-col p-0' : ''}`}>
@@ -505,6 +555,12 @@ export function BarcodeScanner({
             isFullScreen ? 'flex-1 w-full h-full' : 'aspect-video rounded-lg'
           }`}
         >
+          {/* Hidden container for html5-qrcode */}
+          <div id="qr-scanner-container" className="hidden" />
+          
+          {/* Hidden canvas for BarcodeDetector */}
+          <canvas ref={canvasRef} className="hidden" />
+
           <video
             ref={videoRef}
             className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`}
@@ -518,22 +574,28 @@ export function BarcodeScanner({
             </div>
           )}
 
-          {/* Overlay layer for detected codes */}
+          {/* Scanning overlay */}
           {isScanning && (
             <div className="absolute inset-0 pointer-events-none">
-              {/* Scanning visual aid */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-                <ScanLine className="w-64 h-64 text-white animate-pulse" />
+              {/* Scanning guide */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-64 h-64 border-2 border-primary/50 rounded-lg relative">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ScanLine className="w-32 h-32 text-primary/30 animate-pulse" />
+                  </div>
+                </div>
               </div>
-              
+
+              {/* Detected codes */}
               {codesArray.map((code) => {
-                // Calculate display coordinates
                 const displayX = code.x * containerSize.width
                 const displayY = code.y * containerSize.height
 
-                // Show popup if we have set info, otherwise show a simple indicator
                 if (!code.setInfo) {
-                  // Show a visual indicator that QR code was detected but no set found
                   return (
                     <div
                       key={code.id}
@@ -572,8 +634,6 @@ export function BarcodeScanner({
                       }
                     }}
                     onAdd={() => {
-                      // Handled by parent if needed, but for now just pass the code scan
-                      // Or we can add direct add functionality here
                       onScan(code.code)
                     }}
                   />
@@ -604,13 +664,12 @@ export function BarcodeScanner({
                 </Button>
               )}
             </div>
-
-        <p className="text-xs text-muted-foreground text-center">
-          Point at a LEGO box QR code to see set details.
-        </p>
+            <p className="text-xs text-muted-foreground text-center">
+              Point at a LEGO box QR code to see set details.
+            </p>
           </>
         )}
-        
+
         {isFullScreen && (
           <div className="absolute bottom-8 left-0 right-0 px-4 z-20 flex justify-center">
             {!isScanning ? (
