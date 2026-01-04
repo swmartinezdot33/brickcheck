@@ -1,3 +1,6 @@
+-- Ensure UUID extension is enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Add complete sets support to sets table
 ALTER TABLE sets ADD COLUMN IF NOT EXISTS is_complete_set BOOLEAN DEFAULT false;
 ALTER TABLE sets ADD COLUMN IF NOT EXISTS minifigure_count INTEGER;
@@ -12,7 +15,7 @@ ALTER TABLE user_collection_items ADD COLUMN IF NOT EXISTS collection_id UUID RE
 
 -- Create collections table if it doesn't exist
 CREATE TABLE IF NOT EXISTS collections (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
@@ -23,9 +26,9 @@ CREATE TABLE IF NOT EXISTS collections (
 
 -- Add collection pricing table for multi-source pricing
 CREATE TABLE IF NOT EXISTS collection_item_prices (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   collection_item_id UUID NOT NULL REFERENCES user_collection_items(id) ON DELETE CASCADE,
-  source TEXT NOT NULL, -- 'BRICKLINK', 'BRICKECONOMY', 'EBAY', 'STOCKX', etc.
+  source TEXT NOT NULL,
   price_cents INTEGER NOT NULL,
   currency TEXT DEFAULT 'USD',
   last_updated TIMESTAMPTZ NOT NULL,
@@ -33,12 +36,18 @@ CREATE TABLE IF NOT EXISTS collection_item_prices (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create updated_at trigger for collections
-CREATE TRIGGER update_collections_updated_at BEFORE UPDATE ON collections
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create updated_at trigger for collections (if function exists)
+DO $$ 
+BEGIN
+  CREATE TRIGGER update_collections_updated_at BEFORE UPDATE ON collections
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION WHEN OTHERS THEN 
+  NULL;
+END $$;
 
 -- Create indices for performance
 CREATE INDEX IF NOT EXISTS idx_collection_item_prices_collection_item_id ON collection_item_prices(collection_item_id);
 CREATE INDEX IF NOT EXISTS idx_collection_item_prices_source ON collection_item_prices(source);
 CREATE INDEX IF NOT EXISTS idx_user_collection_items_collection_id ON user_collection_items(collection_id);
+
 
