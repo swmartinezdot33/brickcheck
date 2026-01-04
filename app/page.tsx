@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -31,32 +31,8 @@ export default function LandingPage() {
   const router = useRouter()
   const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null)
 
-  // Check immediately on mount (before any rendering)
-  useEffect(() => {
-    // Check if running in Capacitor
-    try {
-      const Capacitor = (window as any).Capacitor
-      if (Capacitor) {
-        const platform = Capacitor.getPlatform()
-        if (platform === 'android' || platform === 'ios') {
-          setIsNativeApp(true)
-          router.replace('/login')
-          return
-        }
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-    setIsNativeApp(false)
-  }, [router])
-
-  // Don't render anything until we've checked (prevents flash)
-  if (isNativeApp === null || isNativeApp) {
-    return null
-  }
-
-  // Structured data for SEO
-  const structuredData = {
+  // Structured data for SEO (memoized to prevent recreation on every render)
+  const structuredData = useMemo(() => ({
     "@context": "https://schema.org",
     "@graph": [
       {
@@ -70,7 +46,7 @@ export default function LandingPage() {
           "width": 512,
           "height": 512
         },
-        "description": "BrickCheck is the premier LEGO collection tracking app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change.",
+        "description": "BrickCheck is the premier LEGO collection app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change. The best LEGO collection app for iOS and Android.",
         "sameAs": [
           "https://www.facebook.com/brickcheckapp",
           "https://www.instagram.com/brickcheckapp",
@@ -89,7 +65,7 @@ export default function LandingPage() {
           "price": "0",
           "priceCurrency": "USD"
         },
-        "description": "Track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change. Available on iOS and Android.",
+        "description": "BrickCheck is the best LEGO collection app for tracking your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change. Available on iOS and Android.",
         "screenshot": "https://www.brickcheck.app/BrickCheck Logo.png",
         "featureList": [
           "Barcode scanning for LEGO sets",
@@ -186,34 +162,50 @@ export default function LandingPage() {
         ]
       }
     ]
+  }), [])
+
+  // Check immediately on mount (before any rendering)
+  useEffect(() => {
+    // Check if running in Capacitor
+    try {
+      const Capacitor = (window as any).Capacitor
+      if (Capacitor) {
+        const platform = Capacitor.getPlatform()
+        if (platform === 'android' || platform === 'ios') {
+          setIsNativeApp(true)
+          router.replace('/login')
+          return
+        }
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    setIsNativeApp(false)
+  }, [router])
+
+  // Inject structured data script (always called to maintain hook order)
+  useEffect(() => {
+    // Only inject if we're not in native app
+    if (isNativeApp === false) {
+      // Add structured data script
+      const structuredDataScript = document.createElement('script')
+      structuredDataScript.type = 'application/ld+json'
+      structuredDataScript.text = JSON.stringify(structuredData)
+      structuredDataScript.id = 'structured-data'
+      if (!document.getElementById('structured-data')) {
+        document.head.appendChild(structuredDataScript)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNativeApp])
+
+  // Don't render anything until we've checked (prevents flash)
+  if (isNativeApp === null || isNativeApp) {
+    return null
   }
 
   return (
     <>
-      {/* Structured Data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structuredData),
-        }}
-      />
-      {/* Script to redirect immediately before React hydrates (prevents flash) */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              try {
-                if (window.Capacitor) {
-                  const platform = window.Capacitor.getPlatform();
-                  if (platform === 'android' || platform === 'ios') {
-                    window.location.replace('/login');
-                  }
-                }
-              } catch(e) {}
-            })();
-          `,
-        }}
-      />
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-yellow-50 via-blue-50 to-green-50 dark:from-gray-900 dark:via-purple-900/20">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur-sm shadow-sm sticky top-0 z-50" role="banner">
@@ -264,7 +256,7 @@ export default function LandingPage() {
           
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-6 sm:mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
             Monitor your LEGO sets like investments. Scan barcodes, track market prices, 
-            and get alerts when values change. Available on iOS and Android.
+            and get alerts when values change. The best LEGO Collection App. Available on iOS and Android.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
@@ -284,11 +276,12 @@ export default function LandingPage() {
               <div className="bg-background rounded-xl sm:rounded-[1.4rem] p-3 sm:p-4 aspect-[9/19.5] overflow-hidden">
                 <Image
                   src="/image.png"
-                  alt="BrickCheck app preview showing LEGO collection tracking interface"
+                  alt="BrickCheck app preview showing LEGO collection tracking interface with dashboard, metrics, and collection management"
                   width={400}
                   height={850}
-                  className="w-full h-full object-contain rounded-lg"
+                  className="w-full h-full object-cover rounded-lg"
                   priority
+                  quality={95}
                 />
               </div>
             </div>
@@ -423,12 +416,12 @@ export default function LandingPage() {
                 Built for <span className="text-gradient-lego">Collectors</span>
               </h2>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-                Track your LEGO collection like a portfolio. Know when to buy, sell, or hold.
+                BrickCheck is the best LEGO collection app for tracking your collection like a portfolio. Know when to buy, sell, or hold.
               </p>
               <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed">
                 Whether you're collecting Star Wars sets, Modular Buildings, Technic sets, or rare retired LEGO sets, 
-                BrickCheck helps you make data-driven decisions about your collection. Monitor market trends, 
-                track price changes, and optimize your LEGO investment strategy.
+                BrickCheck - the premier LEGO collection app - helps you make data-driven decisions about your collection. Monitor market trends, 
+                track price changes, and optimize your LEGO investment strategy with the best LEGO collection app available.
               </p>
               <ul className="space-y-2 sm:space-y-3">
                 {[
@@ -676,10 +669,10 @@ export default function LandingPage() {
                 Ready to Track Your Collection?
               </h2>
               <CardDescription className="text-white/90 text-base sm:text-lg md:text-lg mb-2">
-                Download BrickCheck on the App Store or Google Play and start monitoring your LEGO investments today.
+                Download BrickCheck - the best LEGO collection app - on the App Store or Google Play and start monitoring your LEGO investments today.
               </CardDescription>
               <CardDescription className="text-white/80 text-sm sm:text-base">
-                Join thousands of LEGO collectors who use BrickCheck to track, monitor, and optimize their collections.
+                Join thousands of LEGO collectors who use BrickCheck, the premier LEGO collection app, to track, monitor, and optimize their collections.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 sm:p-8 md:pb-12">
@@ -705,10 +698,10 @@ export default function LandingPage() {
             <div className="space-y-3 sm:space-y-4">
               <h3 className="text-xl sm:text-2xl font-bold text-gradient-lego">BrickCheck</h3>
               <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                Track your LEGO collection like stocks. Monitor prices, scan barcodes, and get alerts when values change.
+                BrickCheck is the best LEGO collection app for tracking your LEGO collection like stocks. Monitor prices, scan barcodes, and get alerts when values change.
               </p>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                The premier LEGO collection tracking app for iOS. Perfect for collectors, investors, and LEGO enthusiasts.
+                BrickCheck - the premier LEGO collection app for iOS and Android. Perfect for collectors, investors, and LEGO enthusiasts.
               </p>
             </div>
             <div>
@@ -737,9 +730,24 @@ export default function LandingPage() {
               </Button>
             </div>
           </div>
-          <div className="pt-6 sm:pt-8 border-t text-center text-xs sm:text-sm text-muted-foreground space-y-2">
-            <p>&copy; {new Date().getFullYear()} BrickCheck. All rights reserved.</p>
-            <p>LEGO is a trademark of the LEGO Group, which does not sponsor, authorize, or endorse this app.</p>
+          <div className="pt-6 sm:pt-8 border-t">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-4 text-xs sm:text-sm">
+              <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                Privacy Policy
+              </Link>
+              <span className="hidden sm:inline text-muted-foreground">•</span>
+              <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                Terms of Service
+              </Link>
+              <span className="hidden sm:inline text-muted-foreground">•</span>
+              <Link href="/support" className="text-muted-foreground hover:text-primary transition-colors">
+                Support
+              </Link>
+            </div>
+            <div className="text-center text-xs sm:text-sm text-muted-foreground space-y-2">
+              <p>&copy; {new Date().getFullYear()} BrickCheck. All rights reserved.</p>
+              <p>LEGO is a trademark of the LEGO Group, which does not sponsor, authorize, or endorse this app.</p>
+            </div>
           </div>
         </div>
       </footer>

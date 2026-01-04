@@ -17,6 +17,7 @@ Disallow: /account/
 Allow: /
 Allow: /privacy
 Allow: /terms
+Allow: /support
 
 # Crawl-delay (optional, adjust as needed)
 Crawl-delay: 1

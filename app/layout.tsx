@@ -16,11 +16,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "BrickCheck - Track Your LEGO Collection Value Like Stocks",
+    default: "BrickCheck - Track Your LEGO Collection Like Stocks | The Best LEGO Collection App",
     template: "%s | BrickCheck"
   },
-  description: "Download BrickCheck on iOS and Android to track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change. The premier LEGO collection tracking app for collectors and investors. Available on the App Store and Google Play.",
+  description: "BrickCheck is the premier LEGO collection app for tracking your LEGO collection value like stocks. Download BrickCheck on iOS and Android to monitor prices, scan barcodes, and get alerts. The best LEGO collection app for collectors and investors. Available on the App Store and Google Play.",
   keywords: [
+    "BrickCheck",
+    "Lego Collection App",
+    "LEGO collection app",
+    "BrickCheck app",
+    "BrickCheck LEGO tracker",
     "LEGO collection tracker",
     "LEGO value tracker",
     "LEGO price monitoring",
@@ -76,7 +81,7 @@ export const metadata: Metadata = {
     url: "https://www.brickcheck.app",
     siteName: "BrickCheck",
     title: "BrickCheck - Track Your LEGO Collection Value Like Stocks",
-    description: "Download BrickCheck on iOS and Android to track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change. The premier LEGO collection tracking app for collectors and investors.",
+    description: "BrickCheck is the premier LEGO collection app for tracking your LEGO collection value like stocks. Download BrickCheck on iOS and Android to monitor prices, scan barcodes, and get alerts. The best LEGO collection app for collectors and investors.",
     images: [
       {
         url: '/BrickCheck Logo.png',
@@ -89,8 +94,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "BrickCheck - Track Your LEGO Collection Value Like Stocks",
-    description: "Download BrickCheck on iOS and Android to track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change.",
+    title: "BrickCheck - Track Your LEGO Collection Like Stocks | The Best LEGO Collection App",
+    description: "BrickCheck is the premier LEGO collection app for tracking your LEGO collection value like stocks. Download BrickCheck on iOS and Android to monitor prices, scan barcodes, and get alerts.",
     images: ['/BrickCheck Logo.png'],
     creator: "@brickcheckapp",
     site: "@brickcheckapp",
