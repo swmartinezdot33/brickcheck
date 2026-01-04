@@ -291,7 +291,7 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Upload a CSV file with columns: set_number, quantity, condition (optional)
+                  Upload a CSV file with columns: set_number (or product_number, set_id, id, sku, code), quantity (optional), condition (optional)
                 </p>
                 <Button
                   variant="outline"

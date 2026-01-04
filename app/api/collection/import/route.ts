@@ -144,13 +144,46 @@ export async function POST(request: NextRequest) {
 
       // Parse CSV header
       const header = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase())
-      const setNumberIndex = header.findIndex((h) => h === 'set_number' || h === 'setnumber' || h === 'set')
-      const quantityIndex = header.findIndex((h) => h === 'quantity' || h === 'qty')
-      const conditionIndex = header.findIndex((h) => h === 'condition' || h === 'state')
+      
+      // More flexible column matching for various CSV formats
+      const setNumberIndex = header.findIndex((h) => 
+        h === 'set_number' || 
+        h === 'setnumber' || 
+        h === 'set' ||
+        h === 'product_number' ||
+        h === 'productnumber' ||
+        h === 'product number' ||
+        h === 'set_id' ||
+        h === 'setid' ||
+        h === 'id' ||
+        h === 'set num' ||
+        h === 'item number' ||
+        h === 'item_number' ||
+        h === 'code' ||
+        h === 'sku' ||
+        h === 'set #'
+      )
+      const quantityIndex = header.findIndex((h) => 
+        h === 'quantity' || 
+        h === 'qty' ||
+        h === 'count' ||
+        h === 'amount' ||
+        h === 'owned' ||
+        h === 'number owned'
+      )
+      const conditionIndex = header.findIndex((h) => 
+        h === 'condition' || 
+        h === 'state' ||
+        h === 'status' ||
+        h === 'set_condition'
+      )
 
       if (setNumberIndex === -1) {
         return NextResponse.json(
-          { error: 'CSV file must have a "set_number" column' },
+          { 
+            error: 'CSV file must have a set number column (tried: set_number, product_number, set_id, id, set, sku, code, etc.)',
+            availableColumns: header
+          },
           { status: 400 }
         )
       }
