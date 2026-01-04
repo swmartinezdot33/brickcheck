@@ -70,10 +70,7 @@ export default function LandingPage() {
           "width": 512,
           "height": 512
         },
-        "description": "BrickCheck is the premier LEGO collection tracking app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change.",
-        "sameAs": [
-          // Add social media links when available
-        ]
+        "description": "BrickCheck is the premier LEGO collection tracking app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change."
       },
       {
         "@type": "WebApplication",

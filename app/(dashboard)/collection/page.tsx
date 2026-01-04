@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import { ImportCollection } from '@/components/collection/ImportCollection'
+import { ExportCollection } from '@/components/collection/ExportCollection'
 import { CollectionSwitcher } from '@/components/collection/CollectionSwitcher'
 
 export default function CollectionPage() {
@@ -33,19 +34,27 @@ export default function CollectionPage() {
               Browse & Add Sets
             </Link>
           </Button>
-          <ImportCollection />
+          <div className="flex items-center gap-1">
+            <ExportCollection />
+            <ImportCollection />
+          </div>
         </div>
       </div>
 
       <div className="md:hidden flex flex-col gap-2">
-        <CollectionSwitcher />
+        <div className="flex gap-2">
+          <CollectionSwitcher />
+          <div className="flex items-center gap-1 ml-auto">
+            <ExportCollection />
+            <ImportCollection />
+          </div>
+        </div>
         <Button asChild className="w-full">
           <Link href="/browse">
             <Plus className="h-4 w-4 mr-2" />
             Browse & Add Sets
           </Link>
         </Button>
-        <ImportCollection />
       </div>
 
       <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/20">
