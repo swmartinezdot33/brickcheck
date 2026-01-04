@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { BrowserQRCodeReader, BarcodeFormat } from '@zxing/library'
-import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Camera, CameraOff, ScanLine } from 'lucide-react'
@@ -56,7 +55,6 @@ export function BarcodeScanner({
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
   const barcodeDetectorRef = useRef<BarcodeDetector | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -219,11 +217,17 @@ export function BarcodeScanner({
         setInfo: existingCode?.setInfo,
       })
 
-      // Call onScan callback
+      // Call onScan callback immediately
       if (onScan) {
-        onScan(cleanCode)
+        console.log(`[Scanner] 📞 Calling onScan callback with: ${cleanCode.substring(0, 50)}`)
+        try {
+          onScan(cleanCode)
+        } catch (err) {
+          console.error('[Scanner] ❌ Error in onScan callback:', err)
+        }
       }
 
+      console.log(`[Scanner] ✅ Code added to detected codes: ${codeId}`)
       return updated
     })
   }, [onScan])
@@ -293,54 +297,20 @@ export function BarcodeScanner({
     }
   }, [scanWithBarcodeDetector])
 
-  // Start scanning with html5-qrcode
-  const startHtml5QrCode = useCallback(async (stream: MediaStream) => {
-    try {
-      const video = videoRef.current
-      if (!video) throw new Error('Video element not found')
 
-      const html5QrCode = new Html5Qrcode('qr-scanner-container', {
-        verbose: false,
-      })
-
-      html5QrCodeRef.current = html5QrCode
-
-      setDetectionMethod('html5-qrcode')
-      console.log('[Scanner] 🔄 Using html5-qrcode library')
-
-      // Start scanning
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        },
-        (decodedText) => {
-          console.log(`[Scanner] ✅ html5-qrcode detected: ${decodedText.substring(0, 50)}`)
-          processDetectedCode(decodedText, undefined, BarcodeFormat.QR_CODE)
-        },
-        (errorMessage) => {
-          // Ignore normal scanning errors
-        }
-      )
-    } catch (err) {
-      console.warn('[Scanner] html5-qrcode failed, falling back:', err)
-      throw err
-    }
-  }, [processDetectedCode])
-
-  // Start scanning with ZXing (fallback)
+  // Start scanning with ZXing (most reliable)
   const startZXing = useCallback(async (stream: MediaStream, deviceId: string) => {
     try {
       const codeReader = new BrowserQRCodeReader()
       codeReaderRef.current = codeReader
 
       setDetectionMethod('ZXing Library')
-      console.log('[Scanner] 📚 Using ZXing library (fallback)')
+      console.log('[Scanner] 📚 Using ZXing library')
 
       const video = videoRef.current
       if (!video) throw new Error('Video element not found')
+
+      console.log('[Scanner] Starting ZXing decodeFromVideoDevice...')
 
       codeReader.decodeFromVideoDevice(
         deviceId,
@@ -358,8 +328,10 @@ export function BarcodeScanner({
             const format = result.getBarcodeFormat()
             const code = result.getText().trim()
 
+            console.log(`[Scanner] 🎯 ZXing raw result - format: ${format}, code: ${code.substring(0, 100)}`)
+
             if (format === BarcodeFormat.QR_CODE && code) {
-              console.log(`[Scanner] ✅ ZXing detected: ${code.substring(0, 50)}`)
+              console.log(`[Scanner] ✅ ZXing detected QR code: ${code.substring(0, 50)}`)
               
               // Get bounding box from result points
               const resultPoints = result.getResultPoints()
@@ -374,15 +346,23 @@ export function BarcodeScanner({
                   maxY = Math.max(maxY, point.getY())
                 }
                 boundingBox = new DOMRectReadOnly(minX, minY, maxX - minX, maxY - minY)
+                console.log(`[Scanner] 📦 Bounding box: x=${minX}, y=${minY}, w=${maxX - minX}, h=${maxY - minY}`)
               }
 
+              // Process immediately
               processDetectedCode(code, boundingBox, format)
+            } else {
+              console.warn(`[Scanner] ⚠️ Unexpected format or empty code: format=${format}, code=${code}`)
             }
+          } else {
+            console.warn('[Scanner] ⚠️ ZXing returned result but it was null/undefined')
           }
         }
       )
+      
+      console.log('[Scanner] ✅ ZXing decodeFromVideoDevice started')
     } catch (err) {
-      console.error('[Scanner] ZXing failed:', err)
+      console.error('[Scanner] ❌ ZXing failed:', err)
       throw err
     }
   }, [processDetectedCode])
@@ -432,17 +412,17 @@ export function BarcodeScanner({
         // Method 1: Native BarcodeDetector (fastest, most modern)
         await startBarcodeDetector(stream)
       } catch (err1) {
-        console.log('[Scanner] Trying html5-qrcode...')
+        console.log('[Scanner] BarcodeDetector failed, trying ZXing...', err1)
         try {
-          // Method 2: html5-qrcode (good performance)
-          await startHtml5QrCode(stream)
-        } catch (err2) {
-          console.log('[Scanner] Falling back to ZXing...')
-          // Method 3: ZXing (reliable fallback)
+          // Method 2: ZXing (most reliable, works with our video element)
           const codeReader = new BrowserQRCodeReader()
           const devices = await codeReader.listVideoInputDevices()
           const deviceId = devices[0]?.deviceId || 'default'
+          console.log(`[Scanner] Using device: ${deviceId}`)
           await startZXing(stream, deviceId)
+        } catch (err2) {
+          console.error('[Scanner] All detection methods failed:', err2)
+          throw err2
         }
       }
 
@@ -477,18 +457,6 @@ export function BarcodeScanner({
       codeReaderRef.current = null
     }
 
-    // Stop html5-qrcode
-    if (html5QrCodeRef.current) {
-      html5QrCodeRef.current
-        .stop()
-        .then(() => {
-          html5QrCodeRef.current?.clear()
-        })
-        .catch(() => {
-          // Ignore stop errors
-        })
-      html5QrCodeRef.current = null
-    }
 
     // Stop stream
     if (streamRef.current) {
@@ -555,9 +523,6 @@ export function BarcodeScanner({
             isFullScreen ? 'flex-1 w-full h-full' : 'aspect-video rounded-lg'
           }`}
         >
-          {/* Hidden container for html5-qrcode */}
-          <div id="qr-scanner-container" className="hidden" />
-          
           {/* Hidden canvas for BarcodeDetector */}
           <canvas ref={canvasRef} className="hidden" />
 
@@ -591,9 +556,16 @@ export function BarcodeScanner({
               </div>
 
               {/* Detected codes */}
+              {codesArray.length > 0 && (
+                <div className="absolute top-4 left-4 z-50 bg-black/80 text-white px-3 py-2 rounded text-xs">
+                  Detected: {codesArray.length} code(s)
+                </div>
+              )}
               {codesArray.map((code) => {
                 const displayX = code.x * containerSize.width
                 const displayY = code.y * containerSize.height
+
+                console.log(`[Scanner] Rendering code ${code.id} at (${displayX}, ${displayY})`)
 
                 if (!code.setInfo) {
                   return (
@@ -601,12 +573,12 @@ export function BarcodeScanner({
                       key={code.id}
                       className="absolute z-40 pointer-events-auto"
                       style={{
-                        left: displayX - 60,
-                        top: displayY - 40,
+                        left: Math.max(10, Math.min(displayX - 60, containerSize.width - 130)),
+                        top: Math.max(10, Math.min(displayY - 40, containerSize.height - 100)),
                         width: 120,
                       }}
                     >
-                      <div className="bg-yellow-500/90 backdrop-blur-sm rounded-lg px-3 py-2 border-2 border-yellow-400 shadow-lg">
+                      <div className="bg-yellow-500/95 backdrop-blur-sm rounded-lg px-3 py-2 border-2 border-yellow-400 shadow-xl">
                         <p className="text-xs font-semibold text-white text-center">
                           QR Code Detected
                         </p>
