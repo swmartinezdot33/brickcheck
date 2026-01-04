@@ -120,3 +120,4 @@ ls -lh android/app/build/outputs/bundle/release/app-release.aab
 
 Let me know when you've created the signing key and we can build the app bundle!
 
+

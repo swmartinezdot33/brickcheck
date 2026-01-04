@@ -7,9 +7,13 @@ import { Capacitor } from '@capacitor/core'
 
 /**
  * Check if the app is running in a Capacitor native environment
+ * This works even when loading from a remote URL (server.url config)
  */
 export function isCapacitorNative(): boolean {
-  return Capacitor.isNativePlatform()
+  const platform = Capacitor.getPlatform()
+  // If platform is 'ios' or 'android', we're in the native app
+  // (even if loading from a remote URL via server.url)
+  return platform === 'ios' || platform === 'android'
 }
 
 /**
@@ -32,4 +36,5 @@ export function isAndroid(): boolean {
 export function getPlatform(): 'web' | 'ios' | 'android' {
   return Capacitor.getPlatform() as 'web' | 'ios' | 'android'
 }
+
 

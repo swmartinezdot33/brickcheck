@@ -5,15 +5,10 @@ const config: CapacitorConfig = {
   appName: 'BrickCheck',
   webDir: 'out',
   server: {
-    // DEVELOPMENT: Use local server (default for local testing)
-    // To switch to production, change the url below to: 'https://www.brickcheck.app'
-    // and remove or set cleartext to false
-    url: 'http://localhost:3000',
+    // DEVELOPMENT: Use 10.0.2.2 for Android emulator (maps to host's localhost)
+    // PRODUCTION: Change to 'https://www.brickcheck.app' (or remove for bundled assets)
+    url: 'http://10.0.2.2:3000',
     cleartext: true,
-    
-    // PRODUCTION (commented out - uncomment for production builds):
-    // url: 'https://www.brickcheck.app',
-    // cleartext: false,
   },
   plugins: {
     Camera: {

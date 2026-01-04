@@ -104,3 +104,4 @@ export abstract class BaseScraper {
   abstract searchSets(query: string): Promise<SetData[]>
 }
 
+

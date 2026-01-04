@@ -14,3 +14,4 @@ WHERE set_number SIMILAR TO '^[0-9]{4,7}$';
 -- Log the action
 COMMENT ON TABLE sets IS 'LEGO Sets catalog - filtered to only valid LEGO set numbers (4-7 digits)';
 
+

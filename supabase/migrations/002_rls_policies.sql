@@ -78,3 +78,4 @@ CREATE POLICY "Audit logs are insertable by service role only" ON audit_log
   FOR INSERT WITH CHECK (auth.role() = 'service_role');
 
 
+

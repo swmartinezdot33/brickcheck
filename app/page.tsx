@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DownloadModal } from '@/components/download-modal'
+import { isCapacitorNative } from '@/lib/utils/capacitor'
 import { 
   Scan, 
   TrendingUp, 
@@ -26,9 +28,53 @@ import {
 
 export default function LandingPage() {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false)
+  const router = useRouter()
+  const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null)
+
+  // Check immediately on mount (before any rendering)
+  useEffect(() => {
+    // Check if running in Capacitor
+    try {
+      const Capacitor = (window as any).Capacitor
+      if (Capacitor) {
+        const platform = Capacitor.getPlatform()
+        if (platform === 'android' || platform === 'ios') {
+          setIsNativeApp(true)
+          router.replace('/login')
+          return
+        }
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    setIsNativeApp(false)
+  }, [router])
+
+  // Don't render anything until we've checked (prevents flash)
+  if (isNativeApp === null || isNativeApp) {
+    return null
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-yellow-50 via-blue-50 to-green-50 dark:from-gray-900 dark:via-purple-900/20">
+    <>
+      {/* Script to redirect immediately before React hydrates (prevents flash) */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                if (window.Capacitor) {
+                  const platform = window.Capacitor.getPlatform();
+                  if (platform === 'android' || platform === 'ios') {
+                    window.location.replace('/login');
+                  }
+                }
+              } catch(e) {}
+            })();
+          `,
+        }}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-yellow-50 via-blue-50 to-green-50 dark:from-gray-900 dark:via-purple-900/20">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur-sm shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
@@ -555,6 +601,7 @@ export default function LandingPage() {
 
       {/* Download Modal */}
       <DownloadModal open={downloadModalOpen} onOpenChange={setDownloadModalOpen} />
-    </div>
+      </div>
+    </>
   )
 }

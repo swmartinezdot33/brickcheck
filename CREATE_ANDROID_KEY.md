@@ -78,3 +78,4 @@ Once you've created the keystore and `key.properties` file:
 
 Let me know when you've created the keystore and I can help you build the app bundle!
 
+

@@ -26,3 +26,4 @@ echo "Current environment variables:"
 npx vercel env ls
 
 
+

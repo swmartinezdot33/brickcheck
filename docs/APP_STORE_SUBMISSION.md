@@ -256,3 +256,4 @@ This guide covers the steps needed to submit BrickCheck to the Apple App Store a
 - [Capacitor iOS Guide](https://capacitorjs.com/docs/ios)
 - [Capacitor Android Guide](https://capacitorjs.com/docs/android)
 
+

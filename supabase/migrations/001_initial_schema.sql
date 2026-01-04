@@ -118,3 +118,4 @@ CREATE TRIGGER update_alerts_updated_at BEFORE UPDATE ON alerts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
+

@@ -42,3 +42,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_entity_type_id ON audit_log(entity_type
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 
 
+

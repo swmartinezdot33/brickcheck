@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { BrowserQRCodeReader, BrowserCodeReader, DecodeHintType, BarcodeFormat } from '@zxing/library'
+import { BrowserQRCodeReader, BarcodeFormat } from '@zxing/library'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Camera, CameraOff } from 'lucide-react'
+import { Camera, CameraOff, ScanLine } from 'lucide-react'
+import { QRPopup } from './QRPopup'
+import { useRouter } from 'next/navigation'
 
 interface DetectedCode {
   id: string // Unique ID for this code (code + format)
@@ -20,6 +21,8 @@ interface DetectedCode {
     name: string
     imageUrl: string | null
     setNumber: string
+    theme?: string
+    year?: number
   } | null
 }
 
@@ -30,6 +33,7 @@ export function BarcodeScanner({
   onScan: (code: string) => void
   onError?: (error: Error) => void
 }) {
+  const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isScanning, setIsScanning] = useState(false)
@@ -37,37 +41,46 @@ export function BarcodeScanner({
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
   const [detectedCodes, setDetectedCodes] = useState<Map<string, DetectedCode>>(new Map())
   const pruningIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
   // Format display names
   const getFormatName = (format: BarcodeFormat): string => {
-    const formatMap: Record<string, string> = {
-      [BarcodeFormat.QR_CODE]: 'QR',
-      [BarcodeFormat.DATA_MATRIX]: 'Data Matrix',
-      [BarcodeFormat.EAN_13]: 'EAN-13',
-      [BarcodeFormat.EAN_8]: 'EAN-8',
-      [BarcodeFormat.UPC_A]: 'UPC-A',
-      [BarcodeFormat.UPC_E]: 'UPC-E',
-      [BarcodeFormat.CODE_128]: 'Code 128',
-      [BarcodeFormat.CODE_39]: 'Code 39',
-    }
-    return formatMap[format] || format.toString()
+    return format === BarcodeFormat.QR_CODE ? 'QR Code' : format.toString()
   }
 
-  // Prune stale codes (not seen for > 1 second)
+  // Update container size on resize
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        setContainerSize({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
+        })
+      }
+    }
+    
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
+
+  // Prune stale codes (not seen for > 500ms for faster updates)
   useEffect(() => {
     if (isScanning) {
       pruningIntervalRef.current = setInterval(() => {
         setDetectedCodes((prev) => {
           const now = Date.now()
           const updated = new Map(prev)
+          let changed = false
           for (const [id, code] of updated.entries()) {
-            if (now - code.timestamp > 1000) {
+            if (now - code.timestamp > 500) {
               updated.delete(id)
+              changed = true
             }
           }
-          return updated
+          return changed ? updated : prev
         })
-      }, 500) // Check every 500ms
+      }, 200) // Check every 200ms
     } else {
       if (pruningIntervalRef.current) {
         clearInterval(pruningIntervalRef.current)
@@ -103,7 +116,6 @@ export function BarcodeScanner({
     try {
       // BrowserQRCodeReader only returns QR codes
       // QR codes from LEGO typically contain URLs with set numbers
-      const isSetNumber = /^\d{4,7}$/.test(code) || code.includes('lego.com') || code.includes('set=')
       
       // For QR codes (which should be URLs or set numbers), try scanLookup
       const res = await fetch(`/api/scanLookup?code=${encodeURIComponent(code)}`)
@@ -114,6 +126,8 @@ export function BarcodeScanner({
             name: data.set.name,
             imageUrl: data.set.image_url,
             setNumber: data.set.set_number,
+            theme: data.set.theme,
+            year: data.set.year,
           }
         }
       }
@@ -270,7 +284,7 @@ export function BarcodeScanner({
             }
             
             // Log QR code detection
-            console.log(`[Scanner] ✅ QR Code detected: ${code.substring(0, 100)}`)
+            // console.log(`[Scanner] ✅ QR Code detected: ${code.substring(0, 100)}`)
             
             // Preserve the full text (may contain URLs)
             const cleanCode = code
@@ -310,9 +324,6 @@ export function BarcodeScanner({
                   // Create unique ID for this code
                   const codeId = `${cleanCode}_${format}`
 
-                  // Log successful QR/Data Matrix detection
-                  console.log(`[Scanner] ✅ Processing ${format === BarcodeFormat.QR_CODE ? 'QR_CODE' : 'DATA_MATRIX'}:`, cleanCode.substring(0, 100))
-
                   // Update detected codes
                   setDetectedCodes((prev) => {
                     const updated = new Map(prev)
@@ -322,14 +333,16 @@ export function BarcodeScanner({
                     if (!existingCode || !existingCode.setInfo) {
                       // Async lookup set information
                       lookupSetInfo(cleanCode, format).then((setInfo) => {
-                        setDetectedCodes((prev) => {
-                          const updated = new Map(prev)
-                          const code = updated.get(codeId)
-                          if (code) {
-                            updated.set(codeId, { ...code, setInfo })
-                          }
-                          return updated
-                        })
+                        if (setInfo) { // Only update if we found info
+                          setDetectedCodes((prev) => {
+                            const updated = new Map(prev)
+                            const code = updated.get(codeId)
+                            if (code) {
+                              updated.set(codeId, { ...code, setInfo })
+                            }
+                            return updated
+                          })
+                        }
                       }).catch((err) => {
                         // Silently fail - set info is optional
                         console.debug('Set lookup failed for code:', cleanCode, err)
@@ -423,9 +436,9 @@ export function BarcodeScanner({
     <Card className={isFullScreen ? 'border-0 shadow-none h-full flex flex-col' : ''}>
       {!isFullScreen && (
         <CardHeader>
-          <CardTitle>Barcode Scanner</CardTitle>
+          <CardTitle>AR Set Scanner</CardTitle>
         <CardDescription>
-          Point your camera at QR codes on LEGO boxes. Tap a detected code to select it.
+          Point your camera at QR codes on LEGO boxes to instantly see set details.
         </CardDescription>
         </CardHeader>
       )}
@@ -452,54 +465,36 @@ export function BarcodeScanner({
           {/* Overlay layer for detected codes */}
           {isScanning && (
             <div className="absolute inset-0 pointer-events-none">
+              {/* Scanning visual aid */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                <ScanLine className="w-64 h-64 text-white animate-pulse" />
+              </div>
+              
               {codesArray.map((code) => {
                 // Calculate display coordinates
-                const displayX = code.x * 100 // Convert to percentage
-                const displayY = code.y * 100
-                const displayWidth = code.width * 100
-                const displayHeight = code.height * 100
+                const displayX = code.x * containerSize.width
+                const displayY = code.y * containerSize.height
+
+                if (!code.setInfo) return null
 
                 return (
-                  <button
+                  <QRPopup
                     key={code.id}
-                    onClick={() => handleCodeClick(code)}
-                    className="absolute pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-105 z-10"
-                    style={{
-                      left: `${displayX}%`,
-                      top: `${displayY}%`,
-                      minWidth: code.setInfo ? '140px' : '80px',
+                    setInfo={code.setInfo}
+                    position={{ x: displayX, y: displayY }}
+                    containerWidth={containerSize.width}
+                    containerHeight={containerSize.height}
+                    onOpen={() => {
+                      if (code.setInfo) {
+                        router.push(`/browse/${code.setInfo.setNumber}`)
+                      }
                     }}
-                  >
-                    <Badge 
-                      variant="default" 
-                      className={`bg-primary/90 hover:bg-primary text-white shadow-lg border-2 border-white/50 px-2 py-1.5 text-xs font-semibold cursor-pointer ${
-                        code.setInfo ? 'flex items-center gap-2' : ''
-                      }`}
-                    >
-                      {code.setInfo?.imageUrl && (
-                        <img
-                          src={code.setInfo.imageUrl}
-                          alt={code.setInfo.name}
-                          className="w-8 h-8 rounded object-cover border border-white/30"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )}
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="font-bold">{getFormatName(code.format)}</span>
-                        {code.setInfo ? (
-                          <span className="text-[10px] opacity-90 truncate max-w-[100px] font-medium">
-                            {code.setInfo.name.length > 15 ? `${code.setInfo.name.substring(0, 15)}...` : code.setInfo.name}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] opacity-90 truncate max-w-[120px]">
-                            {code.code.length > 12 ? `${code.code.substring(0, 12)}...` : code.code}
-                          </span>
-                        )}
-                      </div>
-                    </Badge>
-                  </button>
+                    onAdd={() => {
+                      // Handled by parent if needed, but for now just pass the code scan
+                      // Or we can add direct add functionality here
+                      onScan(code.code)
+                    }}
+                  />
                 )
               })}
             </div>
@@ -518,47 +513,32 @@ export function BarcodeScanner({
               {!isScanning ? (
                 <Button onClick={startScanning} className="flex-1">
                   <Camera className="h-4 w-4 mr-2" />
-                  Start Scanning
+                  Start AR Scanner
                 </Button>
               ) : (
                 <Button onClick={stopScanning} variant="destructive" className="flex-1">
                   <CameraOff className="h-4 w-4 mr-2" />
-                  Stop Scanning
+                  Stop Scanner
                 </Button>
               )}
             </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Make sure to allow camera access when prompted. Only QR codes and Data Matrix codes are detected (linear barcodes are ignored).
+          Point at a LEGO box QR code to see set details.
         </p>
-
-            {isScanning && codesArray.length > 0 && (
-              <div className="text-xs text-muted-foreground text-center">
-                {codesArray.length} code{codesArray.length !== 1 ? 's' : ''} detected
-              </div>
-            )}
           </>
         )}
         
         {isFullScreen && (
-          <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
-            <div className="flex gap-2">
-              {!isScanning ? (
-                <Button onClick={startScanning} className="flex-1" size="lg">
-                  <Camera className="h-5 w-5 mr-2" />
-                  Start Scanning
-                </Button>
-              ) : (
-                <Button onClick={stopScanning} variant="destructive" className="flex-1" size="lg">
-                  <CameraOff className="h-5 w-5 mr-2" />
-                  Stop Scanning
-                </Button>
-              )}
-            </div>
-            {isScanning && codesArray.length > 0 && (
-              <div className="text-sm text-white text-center mt-2 bg-black/50 rounded px-3 py-1">
-                {codesArray.length} code{codesArray.length !== 1 ? 's' : ''} detected
-              </div>
+          <div className="absolute bottom-8 left-0 right-0 px-4 z-20 flex justify-center">
+            {!isScanning ? (
+              <Button onClick={startScanning} className="rounded-full h-16 w-16 bg-primary shadow-lg border-4 border-white/20">
+                <Camera className="h-8 w-8" />
+              </Button>
+            ) : (
+              <Button onClick={stopScanning} variant="destructive" className="rounded-full h-16 w-16 shadow-lg border-4 border-white/20">
+                <CameraOff className="h-8 w-8" />
+              </Button>
             )}
           </div>
         )}
