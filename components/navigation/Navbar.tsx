@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Package, Scan, Settings, LogOut, Search, Menu, X, User } from 'lucide-react'
+import { LayoutDashboard, Package, Settings, LogOut, Search, Menu, X, User } from 'lucide-react'
 
 export function Navbar() {
   const router = useRouter()
@@ -29,7 +29,6 @@ export function Navbar() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/browse', icon: Search, label: 'Browse' },
     { href: '/collection', icon: Package, label: 'Collection' },
-    { href: '/scan', icon: Scan, label: 'Scan' },
     { href: '/account', icon: User, label: 'Account' },
   ]
 
