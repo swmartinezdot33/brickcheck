@@ -17,7 +17,7 @@ export default function ScanPage() {
           variant="ghost"
           size="sm"
           onClick={() => router.back()}
-          className="absolute top-2 right-2 z-20 h-10 w-10 p-0 text-white hover:bg-white/20"
+          className="absolute top-4 right-2 z-20 h-10 w-10 p-0 text-white hover:bg-white/20"
         >
           <X className="h-6 w-6" />
         </Button>
