@@ -20,6 +20,9 @@ export type Database = {
           data_quality_score: number | null
           scraped_at: string | null
           external_urls: Record<string, unknown> | null
+          is_complete_set: boolean
+          minifigure_count: number | null
+          set_type: 'STANDARD' | 'MINIFIGURE_SERIES' | 'COLLECTIBLE'
           created_at: string
           updated_at: string
         }
