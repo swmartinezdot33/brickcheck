@@ -41,17 +41,32 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
         if (collectionId) formData.append('collectionId', collectionId)
       }
 
-      const res = await fetch('/api/collection/import', {
-        method: 'POST',
-        body: formData,
-      })
+      // Add timeout to prevent hanging
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to import collection')
+      try {
+        const res = await fetch('/api/collection/import', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || `Import failed: ${res.status} ${res.statusText}`)
+        }
+
+        return res.json()
+      } catch (error) {
+        clearTimeout(timeoutId)
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Import took too long and was cancelled. Try importing fewer sets at once.')
+        }
+        throw error
       }
-
-      return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] })
@@ -346,8 +361,12 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
               <div className="flex-1">
                 <p className="font-medium">Import successful!</p>
                 <p className="text-sm">
-                  {importMutation.data?.importedCount || 0} sets imported successfully
+                  {importMutation.data?.importedCount || 0} sets imported
+                  {importMutation.data?.errorCount > 0 && ` (${importMutation.data.errorCount} not found)`}
                 </p>
+                {importMutation.data?.message && (
+                  <p className="text-xs mt-1 opacity-75">{importMutation.data.message}</p>
+                )}
               </div>
             </div>
           )}

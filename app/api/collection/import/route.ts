@@ -213,28 +213,51 @@ export async function POST(request: NextRequest) {
     const catalogProvider = getCatalogProvider()
     let importedCount = 0
     let errorCount = 0
+    const maxSetsToImport = 500 // Limit to prevent timeouts
 
-    for (const setData of setsToImport) {
+    // Limit the number of sets to import to prevent timeouts
+    const setsToProcessImport = setsToImport.slice(0, maxSetsToImport)
+    if (setsToImport.length > maxSetsToImport) {
+      console.warn(`Import limited to ${maxSetsToImport} sets. Total: ${setsToImport.length}`)
+    }
+
+    for (const setData of setsToProcessImport) {
       try {
-        // Search for the set to get its ID
-        const searchResults = await catalogProvider.searchSets(setData.set_number, 1)
-        const set = searchResults.find((s) => s.setNumber === setData.set_number)
-
-        if (!set) {
-          console.warn(`Set ${setData.set_number} not found`)
-          errorCount++
-          continue
-        }
-
-        // Get set ID from database
-        const { data: dbSet } = await supabase
+        // Search directly in database first (faster than catalog API)
+        let dbSet = null
+        
+        // Try exact match first
+        const { data: exactMatch } = await supabase
           .from('sets')
           .select('id')
-          .eq('set_number', set.setNumber)
+          .eq('set_number', setData.set_number)
           .maybeSingle()
+        
+        if (exactMatch) {
+          dbSet = exactMatch
+        } else {
+          // Fallback to catalog search if not found
+          try {
+            const searchResults = await catalogProvider.searchSets(setData.set_number, 1)
+            const set = searchResults.find((s) => s.setNumber === setData.set_number)
+
+            if (set) {
+              const { data: result } = await supabase
+                .from('sets')
+                .select('id')
+                .eq('set_number', set.setNumber)
+                .maybeSingle()
+              
+              dbSet = result
+            }
+          } catch (searchError) {
+            console.warn(`Catalog search failed for ${setData.set_number}:`, searchError)
+            // Continue without catalog search
+          }
+        }
 
         if (!dbSet) {
-          console.warn(`Set ${setData.set_number} not in database`)
+          console.warn(`Set ${setData.set_number} not found in database`)
           errorCount++
           continue
         }
@@ -282,6 +305,10 @@ export async function POST(request: NextRequest) {
       importedCount,
       errorCount,
       total: setsToImport.length,
+      limitedTo: maxSetsToImport,
+      message: setsToImport.length > maxSetsToImport 
+        ? `Imported ${importedCount} of ${setsToImport.length} sets (limited to ${maxSetsToImport})`
+        : `Successfully imported ${importedCount} sets`
     })
   } catch (error) {
     console.error('Error importing collection:', error)
