@@ -304,8 +304,8 @@ export function BarcodeScanner({
       const codeReader = new BrowserQRCodeReader()
       codeReaderRef.current = codeReader
 
-      setDetectionMethod('ZXing Library')
-      console.log('[Scanner] 📚 Using ZXing library')
+      setDetectionMethod('ZXing Library (QR Code Optimized)')
+      console.log('[Scanner] 📚 Using ZXing library optimized for QR codes')
 
       const video = videoRef.current
       if (!video) throw new Error('Video element not found')
@@ -380,19 +380,33 @@ export function BarcodeScanner({
       }
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      console.log(`[Scanner] Device type: ${isMobile ? 'MOBILE' : 'DESKTOP'}`)
 
       // Get camera stream with optimal settings
+      // MOBILE: Use environment (rear) camera
+      // DESKTOP: Use user (front) camera
+      const facingMode = isMobile ? 'environment' : 'user'
       const constraints: MediaStreamConstraints = {
         video: {
-          facingMode: isMobile ? 'environment' : 'user',
+          facingMode,
           width: { ideal: 1920, min: 1280 },
           height: { ideal: 1080, min: 720 },
           frameRate: { ideal: 30, min: 15 },
         },
       }
 
+      console.log(`[Scanner] Requesting camera with facingMode: ${facingMode}`)
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
+
+      // Log actual camera info
+      const videoTracks = stream.getVideoTracks()
+      if (videoTracks.length > 0) {
+        const settings = videoTracks[0].getSettings()
+        console.log(`[Scanner] Camera settings:`, settings)
+        console.log(`[Scanner] Actual camera resolution: ${settings.width}x${settings.height}`)
+      }
 
       if (!videoRef.current) {
         throw new Error('Video element not found')
@@ -417,6 +431,7 @@ export function BarcodeScanner({
           // Method 2: ZXing (most reliable, works with our video element)
           const codeReader = new BrowserQRCodeReader()
           const devices = await codeReader.listVideoInputDevices()
+          console.log('[Scanner] Available devices:', devices)
           const deviceId = devices[0]?.deviceId || 'default'
           console.log(`[Scanner] Using device: ${deviceId}`)
           await startZXing(stream, deviceId)
