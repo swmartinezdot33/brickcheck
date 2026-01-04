@@ -151,6 +151,31 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Today's Change */}
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-cyan-50/50 to-transparent dark:from-cyan-950/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Change</CardTitle>
+            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${todayChange >= 0 ? 'bg-gradient-lego-green' : 'bg-gradient-lego-red'}`}>
+              {todayChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-white" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-white" />
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${todayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {todayChange >= 0 ? '+' : ''}
+              {formatCurrency(Math.abs(todayChange))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats?.todayPercentChange !== undefined
+                ? `${stats.todayPercentChange >= 0 ? '+' : ''}${stats.todayPercentChange.toFixed(2)}%`
+                : 'N/A'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
