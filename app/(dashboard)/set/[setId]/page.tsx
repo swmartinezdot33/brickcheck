@@ -58,7 +58,7 @@ export default function SetDetailPage({
         <p className="text-muted-foreground">
           Set #{set.set_number} • {set.theme || 'Unknown Theme'} • {set.year || 'Unknown Year'}
         </p>
-        {set.piece_count && (
+        {set.piece_count && set.piece_count > 0 && (
           <p className="text-sm text-muted-foreground mt-1">
             {set.piece_count.toLocaleString()} pieces
           </p>
