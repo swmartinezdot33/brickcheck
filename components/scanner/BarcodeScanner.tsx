@@ -436,7 +436,7 @@ export function BarcodeScanner({
     <Card className={isFullScreen ? 'border-0 shadow-none h-full flex flex-col' : ''}>
       {!isFullScreen && (
         <CardHeader>
-          <CardTitle>AR Set Scanner</CardTitle>
+          <CardTitle>Scanner</CardTitle>
         <CardDescription>
           Point your camera at QR codes on LEGO boxes to instantly see set details.
         </CardDescription>
@@ -513,7 +513,7 @@ export function BarcodeScanner({
               {!isScanning ? (
                 <Button onClick={startScanning} className="flex-1">
                   <Camera className="h-4 w-4 mr-2" />
-                  Start AR Scanner
+                  Start Scanning
                 </Button>
               ) : (
                 <Button onClick={stopScanning} variant="destructive" className="flex-1">
