@@ -10,24 +10,20 @@ export default function ScanPage() {
 
   return (
     <>
-      {/* Mobile: Full screen scanner - no navbar, no bottom nav */}
-      <div className="md:hidden fixed inset-0 bg-black z-50 flex flex-col">
-        {/* Minimal header with close button */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 z-10 safe-area-inset-top">
-          <div className="w-10" /> {/* Spacer */}
-          <h1 className="text-white font-bold text-lg">Scan</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="h-10 w-10 p-0 text-white hover:bg-white/10"
-          >
-            <X className="h-6 w-6" />
-          </Button>
-        </div>
+      {/* Mobile: Full screen scanner */}
+      <div className="md:hidden fixed inset-0 bg-black z-50">
+        {/* Close button - overlay in top right */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="absolute top-2 right-2 z-20 h-10 w-10 p-0 text-white hover:bg-white/20"
+        >
+          <X className="h-6 w-6" />
+        </Button>
 
-        {/* Scanner - full screen */}
-        <div className="flex-1 pt-14">
+        {/* Full screen camera */}
+        <div className="w-full h-full">
           <BarcodeScanner
             onScan={(code) => {
               console.log('Scanned code:', code)
