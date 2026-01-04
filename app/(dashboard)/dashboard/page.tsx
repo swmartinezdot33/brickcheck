@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Package, DollarSign, Loader2, BarChart3 } fro
 import { formatCurrency } from '@/lib/utils'
 import { DistributionChart } from '@/components/collection/DistributionChart'
 import { CollectionSwitcher } from '@/components/collection/CollectionSwitcher'
+import { BiggestMovers } from '@/components/collection/BiggestMovers'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -165,18 +166,10 @@ export default function DashboardPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Biggest Movers</CardTitle>
-          <CardDescription>Sets with the largest value changes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Add sets to your collection to see price movements. This feature will show your biggest gainers and
-            losers once pricing data is available.
-          </p>
-        </CardContent>
-      </Card>
+      <BiggestMovers 
+        gainers={stats?.topGainers || []} 
+        losers={stats?.topLosers || []} 
+      />
     </div>
   )
 }

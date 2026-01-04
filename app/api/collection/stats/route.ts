@@ -93,9 +93,21 @@ export async function GET(request: NextRequest) {
     const distributionByTheme: Record<string, number> = {}
     const distributionByYear: Record<string, number> = {}
     
-    // For CAGR
+    // For CAGR and biggest movers
     let totalCAGRWeightedSum = 0
     let totalCAGRWeight = 0
+    const moversData: Array<{
+      setId: string
+      setNumber: string
+      setName: string
+      condition: string
+      quantity: number
+      currentPrice: number
+      priceMonth30DaysAgo: number
+      change: number
+      percentChange: number
+      imageUrl?: string
+    }> = []
 
     items?.forEach((item) => {
       const set = item.sets as any
@@ -107,6 +119,24 @@ export async function GET(request: NextRequest) {
 
       totalEstimatedValue += itemValue
       totalEstimatedValue30DaysAgo += itemValue30DaysAgo
+
+      // Calculate price change for movers
+      if (latestPrice && historicalPrice && latestPrice > 0) {
+        const priceChange = latestPrice - historicalPrice
+        const pricePercentChange = (priceChange / historicalPrice) * 100
+        
+        moversData.push({
+          setId: set.id,
+          setNumber: set.set_number,
+          setName: set.name,
+          condition: item.condition,
+          quantity: item.quantity,
+          currentPrice: latestPrice,
+          priceMonth30DaysAgo: historicalPrice,
+          change: priceChange,
+          percentChange: pricePercentChange,
+        })
+      }
 
       // Distribution
       if (itemValue > 0) {
@@ -135,6 +165,39 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+
+    // Get biggest movers - top 5 gainers and top 5 losers
+    const sortedByChange = [...moversData].sort((a, b) => b.change - a.change)
+    const topGainers = sortedByChange.slice(0, 5)
+    const topLosers = sortedByChange.slice(-5).reverse()
+    
+    // Fetch set images for movers
+    const moverSetIds = [...topGainers, ...topLosers].map(m => m.setId)
+    const uniqueMoverSetIds = Array.from(new Set(moverSetIds))
+    
+    let setImages: Record<string, string> = {}
+    if (uniqueMoverSetIds.length > 0) {
+      const { data: setData } = await supabase
+        .from('sets')
+        .select('id, image_url')
+        .in('id', uniqueMoverSetIds)
+      
+      if (setData) {
+        setData.forEach((s: any) => {
+          setImages[s.id] = s.image_url
+        })
+      }
+    }
+    
+    // Add images to movers
+    const gainersList = topGainers.map(m => ({
+      ...m,
+      imageUrl: setImages[m.setId] || undefined
+    }))
+    const losersList = topLosers.map(m => ({
+      ...m,
+      imageUrl: setImages[m.setId] || undefined
+    }))
 
     // Calculate aggregate stats
     const totalSets = items?.reduce((sum, item) => sum + item.quantity, 0) || 0
@@ -187,7 +250,9 @@ export async function GET(request: NextRequest) {
         .slice(0, 10), // Top 10 themes
       distributionByYear: Object.entries(distributionByYear)
         .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value)
+        .sort((a, b) => b.value - a.value),
+      topGainers: gainersList,
+      topLosers: losersList,
     })
   } catch (error) {
     console.error('Error fetching collection stats:', error)
