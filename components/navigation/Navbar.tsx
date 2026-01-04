@@ -1,17 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Package, Scan, Settings, LogOut, Search, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Package, Scan, Settings, LogOut, Search, Menu, X, User } from 'lucide-react'
 
 export function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch by only using pathname after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -24,7 +30,7 @@ export function Navbar() {
     { href: '/browse', icon: Search, label: 'Browse' },
     { href: '/collection', icon: Package, label: 'Collection' },
     { href: '/scan', icon: Scan, label: 'Scan' },
-    { href: '/account', icon: Settings, label: 'Account' },
+    { href: '/account', icon: User, label: 'Account' },
   ]
 
   return (
@@ -52,7 +58,7 @@ export function Navbar() {
               <div className="hidden md:flex items-center gap-1">
                 {navLinks.map((link) => {
                   const Icon = link.icon
-                  const isActive = pathname === link.href
+                  const isActive = mounted && pathname === link.href
                   return (
                     <Link
                       key={link.href}
@@ -111,7 +117,7 @@ export function Navbar() {
                 <div className="flex flex-col gap-2">
                   {navLinks.map((link) => {
                     const Icon = link.icon
-                    const isActive = pathname === link.href
+                    const isActive = mounted && pathname === link.href
                     return (
                       <Link
                         key={link.href}
