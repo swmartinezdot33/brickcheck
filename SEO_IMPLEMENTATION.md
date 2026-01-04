@@ -33,8 +33,8 @@ This document outlines all SEO optimizations implemented to ensure Google and ot
 - ✅ **twitter:title**: Optimized title
 - ✅ **twitter:description**: Full description
 - ✅ **twitter:image**: Logo image
-- ✅ **twitter:creator**: @brickcheck (placeholder)
-- ✅ **twitter:site**: @brickcheck (placeholder)
+- ✅ **twitter:creator**: @brickcheckapp
+- ✅ **twitter:site**: @brickcheckapp
 
 #### Robots Meta
 - ✅ **index**: true
@@ -57,7 +57,7 @@ Implemented comprehensive structured data using Schema.org vocabulary:
 #### Organization Schema
 - ✅ Organization name, URL, logo
 - ✅ Description
-- ✅ Social media links (placeholder)
+- ✅ Social media links (Facebook, Instagram, TikTok: @brickcheckapp)
 
 #### WebApplication Schema
 - ✅ Application name and category
@@ -229,7 +229,7 @@ Long-tail keywords:
 - All URLs use `https://www.brickcheck.app` as the base
 - Structured data uses absolute URLs
 - Images reference `/BrickCheck Logo.png` (verify this exists)
-- Social media handles are placeholders (@brickcheck) - update when available
+- Social media handles: @brickcheckapp on Facebook, Instagram, and TikTok
 - Rating data in structured data is placeholder - update with real data when available
 
 ## 🔗 Resources

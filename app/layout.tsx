@@ -92,8 +92,8 @@ export const metadata: Metadata = {
     title: "BrickCheck - Track Your LEGO Collection Value Like Stocks",
     description: "Download BrickCheck on iOS and Android to track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change.",
     images: ['/BrickCheck Logo.png'],
-    creator: "@brickcheck",
-    site: "@brickcheck",
+    creator: "@brickcheckapp",
+    site: "@brickcheckapp",
   },
   verification: {
     // Add these when you have them:

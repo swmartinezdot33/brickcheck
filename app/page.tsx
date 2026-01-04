@@ -70,7 +70,12 @@ export default function LandingPage() {
           "width": 512,
           "height": 512
         },
-        "description": "BrickCheck is the premier LEGO collection tracking app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change."
+        "description": "BrickCheck is the premier LEGO collection tracking app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change.",
+        "sameAs": [
+          "https://www.facebook.com/brickcheckapp",
+          "https://www.instagram.com/brickcheckapp",
+          "https://www.tiktok.com/@brickcheckapp"
+        ]
       },
       {
         "@type": "WebApplication",
@@ -273,16 +278,18 @@ export default function LandingPage() {
             </Button>
           </div>
 
-          {/* App Mockup Placeholder */}
+          {/* App Preview */}
           <div className="relative max-w-sm mx-auto mb-12 sm:mb-20">
             <div className="bg-gradient-lego-vibrant p-1 rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl">
-              <div className="bg-background rounded-xl sm:rounded-[1.4rem] p-3 sm:p-4 aspect-[9/19.5] flex items-center justify-center">
-                <div className="text-center space-y-3 sm:space-y-4">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-gradient-lego-vibrant rounded-xl sm:rounded-2xl flex items-center justify-center">
-                    <Package className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
-                  </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">App Preview</p>
-                </div>
+              <div className="bg-background rounded-xl sm:rounded-[1.4rem] p-3 sm:p-4 aspect-[9/19.5] overflow-hidden">
+                <Image
+                  src="/image.png"
+                  alt="BrickCheck app preview showing LEGO collection tracking interface"
+                  width={400}
+                  height={850}
+                  className="w-full h-full object-contain rounded-lg"
+                  priority
+                />
               </div>
             </div>
           </div>
