@@ -31,9 +31,7 @@ export default function CollectionPage() {
               Browse & Add Sets
             </Link>
           </Button>
-          <Button variant="outline" size="sm" title="Import Collection">
             <ImportCollection />
-          </Button>
         </div>
       </div>
 
@@ -44,9 +42,7 @@ export default function CollectionPage() {
             Browse & Add Sets
           </Link>
         </Button>
-        <Button variant="outline" size="sm" title="Import Collection">
           <ImportCollection />
-        </Button>
       </div>
 
       <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/20">

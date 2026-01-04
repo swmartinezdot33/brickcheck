@@ -108,7 +108,10 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Download className="h-4 w-4 cursor-pointer hover:text-primary transition-colors" />
+        <Button variant="outline" size="icon" className="h-9 w-9">
+          <Download className="h-4 w-4" />
+          <span className="sr-only">Import Collection</span>
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
