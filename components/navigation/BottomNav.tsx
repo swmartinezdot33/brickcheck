@@ -56,14 +56,15 @@ export function BottomNav() {
 
   if (!mounted) return null
 
-  // Hide bottom nav on full-screen pages (like scan on mobile)
+  // Hide bottom nav on full-screen scanner page
   const hideNav = pathname === '/scan'
+
+  if (hideNav) return null
 
   return (
     <nav
       className={cn(
-        'fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md md:hidden z-40',
-        hideNav && 'hidden'
+        'fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md md:hidden z-40'
       )}
     >
       <div className="flex items-center justify-around h-16 safe-area-inset-bottom">
