@@ -10,6 +10,7 @@ import { RecentSales } from '@/components/pricing/RecentSales'
 import { PriceForecastCard } from '@/components/pricing/PriceForecastCard'
 import { formatCurrency } from '@/lib/utils'
 import { Loader2, TrendingUp, TrendingDown } from 'lucide-react'
+import { SetImage } from '@/components/ui/SetImage'
 
 export default function SetDetailPage({
   params,
@@ -64,27 +65,17 @@ export default function SetDetailPage({
         )}
       </div>
 
-      {set.image_url && (
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-yellow-50/30 to-transparent dark:from-yellow-950/20">
-          <CardContent className="p-6">
-            <div className="max-w-md mx-auto">
-              <img
-                src={set.image_url}
-                alt={set.name}
-                className="w-full h-auto rounded-lg"
-                onError={(e) => {
-                  // Show placeholder if image fails to load
-                  e.currentTarget.style.display = 'none'
-                  const placeholder = document.createElement('div')
-                  placeholder.className = 'w-full aspect-square bg-muted rounded-lg flex items-center justify-center text-muted-foreground'
-                  placeholder.textContent = 'Image not available'
-                  e.currentTarget.parentElement!.appendChild(placeholder)
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="border-2 border-primary/20 bg-gradient-to-br from-yellow-50/30 to-transparent dark:from-yellow-950/20">
+        <CardContent className="p-6">
+          <div className="max-w-md mx-auto aspect-square bg-muted rounded-lg overflow-hidden">
+            <SetImage
+              src={set.image_url}
+              alt={set.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="sealed" className="space-y-4">
         <TabsList>

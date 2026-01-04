@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DownloadModal } from '@/components/download-modal'
@@ -32,9 +33,16 @@ export default function LandingPage() {
       <header className="border-b bg-background/95 backdrop-blur-sm shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent truncate">
-              BrickCheck
-            </h1>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/BrickCheck Logo.png"
+                alt="BrickCheck"
+                width={180}
+                height={40}
+                className="h-6 sm:h-8 md:h-10 w-auto"
+                priority
+              />
+            </Link>
             <Button 
               onClick={() => setDownloadModalOpen(true)}
               size="sm"

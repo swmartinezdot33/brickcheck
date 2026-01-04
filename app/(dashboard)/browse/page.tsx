@@ -16,6 +16,7 @@ import {
 import { Search, Loader2, Package, ExternalLink, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
 import { Set } from '@/types'
 import Link from 'next/link'
+import { SetImage } from '@/components/ui/SetImage'
 import { formatCurrency } from '@/lib/utils'
 import { AddItemModal } from '@/components/collection/AddItemModal'
 
@@ -265,22 +266,11 @@ export default function BrowsePage() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="aspect-square w-full bg-muted rounded-lg overflow-hidden mb-2">
-                      {set.image_url ? (
-                        <img
-                          src={set.image_url}
-                          alt={set.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Hide image if it fails to load
-                            e.currentTarget.style.display = 'none'
-                            e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>'
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                          No Image
-                        </div>
-                      )}
+                      <SetImage
+                        src={set.image_url}
+                        alt={set.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     {set.piece_count && (
                       <p className="text-sm text-muted-foreground">

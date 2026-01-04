@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { SetImage } from '@/components/ui/SetImage'
 
 interface MoverSet {
   setId: string
@@ -61,17 +63,10 @@ export function BiggestMovers({ gainers, losers }: BiggestMoversProps) {
                     key={`${mover.setId}-${mover.condition}`}
                     className="p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20"
                   >
-                    <div className="flex items-start gap-3">
-                      {mover.imageUrl && (
-                        <img
-                          src={mover.imageUrl}
-                          alt={mover.setName}
-                          className="h-12 w-12 rounded object-cover flex-shrink-0"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )}
+                  <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                        <SetImage src={mover.imageUrl} alt={mover.setName} className="h-12 w-12 object-cover" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{mover.setName}</div>
                         <div className="text-xs text-muted-foreground">
@@ -110,17 +105,10 @@ export function BiggestMovers({ gainers, losers }: BiggestMoversProps) {
                     key={`${mover.setId}-${mover.condition}`}
                     className="p-3 rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"
                   >
-                    <div className="flex items-start gap-3">
-                      {mover.imageUrl && (
-                        <img
-                          src={mover.imageUrl}
-                          alt={mover.setName}
-                          className="h-12 w-12 rounded object-cover flex-shrink-0"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )}
+                  <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                        <SetImage src={mover.imageUrl} alt={mover.setName} className="h-12 w-12 object-cover" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{mover.setName}</div>
                         <div className="text-xs text-muted-foreground">
