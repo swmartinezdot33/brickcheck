@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollectionList } from '@/components/collection/CollectionList'
@@ -14,6 +15,8 @@ import { ExportCollection } from '@/components/collection/ExportCollection'
 import { CollectionSwitcher } from '@/components/collection/CollectionSwitcher'
 
 export default function CollectionPage() {
+  const searchParams = useSearchParams()
+  const collectionId = searchParams.get('collectionId')
   const [editingItem, setEditingItem] = useState<CollectionItemWithSet | null>(null)
   const [retiredFilter, setRetiredFilter] = useState<'all' | 'retired' | 'active'>('all')
 
@@ -35,8 +38,8 @@ export default function CollectionPage() {
             </Link>
           </Button>
           <div className="flex items-center gap-1">
-            <ExportCollection />
-            <ImportCollection />
+            <ExportCollection collectionId={collectionId} />
+            <ImportCollection collectionId={collectionId} />
           </div>
         </div>
       </div>
@@ -45,8 +48,8 @@ export default function CollectionPage() {
         <div className="flex gap-2">
           <CollectionSwitcher />
           <div className="flex items-center gap-1 ml-auto">
-            <ExportCollection />
-            <ImportCollection />
+            <ExportCollection collectionId={collectionId} />
+            <ImportCollection collectionId={collectionId} />
           </div>
         </div>
         <Button asChild className="w-full">
@@ -82,6 +85,7 @@ export default function CollectionPage() {
               setEditingItem(item)
             }}
             retiredFilter={retiredFilter}
+            collectionId={collectionId}
           />
         </CardContent>
       </Card>
