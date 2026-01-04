@@ -1,0 +1,23 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.brickcheck.app/sitemap.xml
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /signup
+Disallow: /account/
+
+# Allow important pages
+Allow: /
+Allow: /privacy
+Allow: /terms
+
+# Crawl-delay (optional, adjust as needed)
+Crawl-delay: 1
+

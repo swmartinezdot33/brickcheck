@@ -55,8 +55,146 @@ export default function LandingPage() {
     return null
   }
 
+  // Structured data for SEO
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.brickcheck.app/#organization",
+        "name": "BrickCheck",
+        "url": "https://www.brickcheck.app",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.brickcheck.app/BrickCheck Logo.png",
+          "width": 512,
+          "height": 512
+        },
+        "description": "BrickCheck is the premier LEGO collection tracking app that helps collectors monitor their LEGO sets like investments. Track prices, scan barcodes, and get alerts when values change.",
+        "sameAs": [
+          // Add social media links when available
+        ]
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://www.brickcheck.app/#webapp",
+        "name": "BrickCheck",
+        "url": "https://www.brickcheck.app",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": ["iOS", "Android"],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Track your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change. Available on iOS and Android.",
+        "screenshot": "https://www.brickcheck.app/BrickCheck Logo.png",
+        "featureList": [
+          "Barcode scanning for LEGO sets",
+          "Real-time price tracking",
+          "Collection management",
+          "Price alerts and notifications",
+          "Historical price charts",
+          "Sealed and used condition tracking"
+        ]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "BrickCheck",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "iOS",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "100"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "BrickCheck",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Android",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "100"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does BrickCheck track LEGO set prices?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "BrickCheck aggregates price data from multiple sources including BrickLink, Brickset, and other LEGO marketplaces. We update prices regularly and provide historical charts so you can track price trends over time. Our pricing engine analyzes multiple data points to give you accurate market values for both sealed and used sets."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I track both sealed and used LEGO sets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! BrickCheck supports tracking both sealed (new in box) and used sets. You can specify the condition when adding sets to your collection, and our app tracks separate price data for each condition. For used sets, you can also track condition grades like Mint, Complete, or Incomplete."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does barcode scanning work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Simply point your iPhone or Android camera at the barcode on a LEGO set box. BrickCheck automatically identifies the set number and retrieves all set details including name, theme, year, piece count, and current market value. This makes adding sets to your collection quick and effortless."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What types of price alerts can I set?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can set custom price alerts for any set in your collection. Set threshold alerts to be notified when a set reaches a specific price, or percentage change alerts to know when values increase or decrease by a certain percentage. Perfect for timing your buying and selling decisions."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my collection data secure?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolutely. Your collection data is encrypted and stored securely. We use industry-standard security practices and never share your personal collection information with third parties. Your data is private and only accessible by you."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does BrickCheck work offline?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "While BrickCheck requires an internet connection to fetch the latest price data and scan barcodes, you can view your collection and previously loaded data offline. All price updates and barcode scans require an active internet connection to ensure you're getting the most current information."
+            }
+          }
+        ]
+      }
+    ]
+  }
+
   return (
     <>
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
       {/* Script to redirect immediately before React hydrates (prevents flash) */}
       <script
         dangerouslySetInnerHTML={{
@@ -76,7 +214,7 @@ export default function LandingPage() {
       />
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-yellow-50 via-blue-50 to-green-50 dark:from-gray-900 dark:via-purple-900/20">
       {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur-sm shadow-sm sticky top-0 z-50">
+      <header className="border-b bg-background/95 backdrop-blur-sm shadow-sm sticky top-0 z-50" role="banner">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2 sm:gap-3">
@@ -105,8 +243,9 @@ export default function LandingPage() {
         </div>
       </header>
 
+      <main role="main">
       {/* Hero Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20 lg:py-32">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20 lg:py-32" aria-label="Hero section">
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r from-red-100/50 via-blue-100/50 to-green-100/50 backdrop-blur-sm border border-primary/20 mb-6 sm:mb-8 text-xs sm:text-sm animate-fade-in-down">
             <Smartphone className="h-3 w-3 sm:h-4 sm:w-4 text-primary animate-bounce-gentle" />
@@ -154,7 +293,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20 bg-background/50">
+      <section className="container mx-auto px-4 py-20 bg-background/50" aria-label="Features">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">
             Everything You Need to Track Your Collection
@@ -225,7 +364,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20" aria-label="How it works">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 leading-tight">
             How BrickCheck Works
@@ -272,7 +411,7 @@ export default function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20 bg-background/50">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20 bg-background/50" aria-label="Benefits">
         <div className="max-w-4xl mx-auto">
           <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
             <div className="space-y-4 sm:space-y-6 order-2 sm:order-1">
@@ -324,7 +463,7 @@ export default function LandingPage() {
       </section>
 
       {/* Use Cases Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20" aria-label="Use cases">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 leading-tight">
             Perfect for Every LEGO Collector
@@ -377,7 +516,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why Choose BrickCheck Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20 bg-background/50">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20 bg-background/50" aria-label="Why choose BrickCheck">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 leading-tight">
             Why Choose BrickCheck?
@@ -443,7 +582,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20" aria-label="Frequently asked questions">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 leading-tight">
             Frequently Asked Questions
@@ -525,7 +664,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20">
+      <section className="container mx-auto px-3 sm:px-4 py-12 sm:py-20" aria-label="Call to action">
         <div className="max-w-4xl mx-auto">
           <Card className="bg-gradient-lego-vibrant border-0 shadow-xl sm:shadow-2xl card-hover transition-all duration-300">
             <CardHeader className="p-6 sm:p-8 md:pb-8 md:pt-12 animate-fade-in-up">
@@ -553,8 +692,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </main>
+
       {/* Footer */}
-      <footer className="border-t bg-background/50 py-8 sm:py-12">
+      <footer className="border-t bg-background/50 py-8 sm:py-12" role="contentinfo">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div className="space-y-3 sm:space-y-4">

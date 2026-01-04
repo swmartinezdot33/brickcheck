@@ -7,9 +7,10 @@ import { CollectionList } from '@/components/collection/CollectionList'
 import { CollectionItemWithSet } from '@/types'
 import { AddItemModal } from '@/components/collection/AddItemModal'
 import { Button } from '@/components/ui/button'
-import { Plus, Download } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import { ImportCollection } from '@/components/collection/ImportCollection'
+import { CollectionSwitcher } from '@/components/collection/CollectionSwitcher'
 
 export default function CollectionPage() {
   const [editingItem, setEditingItem] = useState<CollectionItemWithSet | null>(null)
@@ -25,24 +26,26 @@ export default function CollectionPage() {
           <p className="text-xs md:text-sm text-muted-foreground mt-1">Manage your LEGO sets</p>
         </div>
         <div className="hidden md:flex items-center gap-2">
+          <CollectionSwitcher />
           <Button asChild>
             <Link href="/browse">
               <Plus className="h-4 w-4 mr-2" />
               Browse & Add Sets
             </Link>
           </Button>
-            <ImportCollection />
+          <ImportCollection />
         </div>
       </div>
 
-      <div className="md:hidden flex gap-2">
-        <Button asChild className="flex-1">
+      <div className="md:hidden flex flex-col gap-2">
+        <CollectionSwitcher />
+        <Button asChild className="w-full">
           <Link href="/browse">
             <Plus className="h-4 w-4 mr-2" />
             Browse & Add Sets
           </Link>
         </Button>
-          <ImportCollection />
+        <ImportCollection />
       </div>
 
       <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/20">
