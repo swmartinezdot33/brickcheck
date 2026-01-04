@@ -32,6 +32,9 @@ export function Navbar() {
     { href: '/account', icon: User, label: 'Account' },
   ]
 
+  // Hide navbar on scan page
+  if (pathname === '/scan') return null
+
   return (
     <>
       <nav className="border-b bg-background/95 backdrop-blur-sm shadow-sm sticky top-0 z-50">
