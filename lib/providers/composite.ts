@@ -2,6 +2,8 @@ import { CatalogProvider, PriceProvider, SetMetadata, PriceData } from './base'
 import { BricksetProvider } from './brickset'
 import { BrickLinkProvider } from './bricklink'
 import { BrickEconomyProvider } from './brickeconomy'
+import EbayProvider from './ebay'
+import StockxProvider from './stockx'
 
 /**
  * Composite provider that aggregates data from all available sources
@@ -117,8 +119,10 @@ export class CompositePriceProvider implements PriceProvider {
   private providers: PriceProvider[] = []
 
   constructor() {
-    // Add all available providers
-    // Prioritize BrickLink (more reliable) over BrickEconomy
+    // Add all available providers in priority order
+    // Priority: BrickLink (authorized) > eBay > StockX > BrickEconomy (fallback)
+    
+    // 1. BrickLink (official authorized retailer data)
     if (
       process.env.BRICKLINK_CONSUMER_KEY &&
       process.env.BRICKLINK_CONSUMER_SECRET &&
@@ -127,13 +131,25 @@ export class CompositePriceProvider implements PriceProvider {
     ) {
       this.providers.push(new BrickLinkProvider())
     }
+
+    // 2. eBay (largest resale marketplace for LEGO)
+    if (process.env.EBAY_API_KEY) {
+      this.providers.push(new EbayProvider())
+    }
+
+    // 3. StockX (premium collectibles and high-value sets)
+    if (process.env.STOCKX_API_KEY) {
+      this.providers.push(new StockxProvider())
+    }
+
+    // 4. BrickEconomy (fallback estimation)
     if (process.env.BRICKECONOMY_API_KEY) {
       this.providers.push(new BrickEconomyProvider(process.env.BRICKECONOMY_API_KEY))
     }
 
     if (this.providers.length === 0) {
       throw new Error(
-        'No price API configured. Set BRICKECONOMY_API_KEY or all BrickLink credentials (BRICKLINK_CONSUMER_KEY, BRICKLINK_CONSUMER_SECRET, BRICKLINK_TOKEN, BRICKLINK_TOKEN_SECRET) environment variables.'
+        'No price API configured. Set BRICKECONOMY_API_KEY, EBAY_API_KEY, STOCKX_API_KEY, or all BrickLink credentials (BRICKLINK_CONSUMER_KEY, BRICKLINK_CONSUMER_SECRET, BRICKLINK_TOKEN, BRICKLINK_TOKEN_SECRET) environment variables.'
       )
     }
   }
