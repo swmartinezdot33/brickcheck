@@ -1,3 +1,4 @@
+import { Navbar } from '@/components/navigation/Navbar'
 import { BottomNav } from '@/components/navigation/BottomNav'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -18,6 +19,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50/30 via-blue-50/20 to-green-50/30 dark:from-gray-900 dark:via-purple-900/10 flex flex-col">
+      {/* Desktop navbar */}
+      <Navbar />
+      
       {/* Main content area with padding for mobile bottom nav */}
       <main className="flex-1 container mx-auto px-4 py-8 pb-20 md:pb-8">
         {children}
