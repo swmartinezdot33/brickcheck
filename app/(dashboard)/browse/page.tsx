@@ -303,9 +303,9 @@ export default function BrowsePage() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    {set.piece_count && set.piece_count > 0 && (
+                    {set.piece_count != null && Number(set.piece_count) > 0 && (
                       <p className="text-sm text-muted-foreground">
-                        {set.piece_count.toLocaleString()} pieces
+                        {Number(set.piece_count).toLocaleString()} pieces
                       </p>
                     )}
                     {set.msrp_cents && (
