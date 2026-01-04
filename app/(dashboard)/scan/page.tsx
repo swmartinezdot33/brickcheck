@@ -10,12 +10,12 @@ export default function ScanPage() {
 
   return (
     <>
-      {/* Mobile: Full screen scanner with close button */}
+      {/* Mobile: Full screen scanner - no navbar, no bottom nav */}
       <div className="md:hidden fixed inset-0 bg-black z-50 flex flex-col">
-        {/* Close button header */}
-        <div className="flex-shrink-0 bg-black/80 backdrop-blur-sm px-4 py-3 z-10 flex items-center justify-between safe-area-inset-top">
-          <div className="w-10" /> {/* Spacer for centering */}
-          <h1 className="text-white font-bold text-center flex-1">Scan</h1>
+        {/* Minimal header with close button */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 z-10 safe-area-inset-top">
+          <div className="w-10" /> {/* Spacer */}
+          <h1 className="text-white font-bold text-lg">Scan</h1>
           <Button
             variant="ghost"
             size="sm"
@@ -26,8 +26,8 @@ export default function ScanPage() {
           </Button>
         </div>
 
-        {/* Scanner full screen */}
-        <div className="flex-1 overflow-hidden relative">
+        {/* Scanner - full screen */}
+        <div className="flex-1 pt-14">
           <BarcodeScanner
             onScan={(code) => {
               console.log('Scanned code:', code)
