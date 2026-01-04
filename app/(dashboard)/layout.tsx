@@ -23,7 +23,7 @@ export default async function DashboardLayout({
       <Navbar />
       
       {/* Main content area with padding for mobile bottom nav */}
-      <main className="flex-1 container mx-auto px-4 py-8 pb-20 md:pb-8">
+      <main className="flex-1 w-full md:container md:mx-auto px-4 py-8 pb-20 md:pb-8">
         {children}
       </main>
       

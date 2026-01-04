@@ -11,15 +11,19 @@ import { formatCurrency } from '@/lib/utils'
 interface CollectionListProps {
   onEdit?: (item: CollectionItemWithSet) => void
   retiredFilter?: 'all' | 'retired' | 'active'
+  collectionId?: string | null
 }
 
-export function CollectionList({ onEdit, retiredFilter = 'all' }: CollectionListProps) {
+export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: CollectionListProps) {
   const queryClient = useQueryClient()
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['collection'],
+    queryKey: ['collection', collectionId],
     queryFn: async () => {
-      const res = await fetch('/api/collection', {
+      const url = collectionId 
+        ? `/api/collection?collectionId=${collectionId}`
+        : '/api/collection'
+      const res = await fetch(url, {
         headers: {
           'Cache-Control': 'no-cache',
         },
@@ -192,4 +196,3 @@ export function CollectionList({ onEdit, retiredFilter = 'all' }: CollectionList
     </div>
   )
 }
-
