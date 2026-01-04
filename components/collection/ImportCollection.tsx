@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Download, FileText, ExternalLink, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Upload, FileText, ExternalLink, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 interface ImportCollectionProps {
@@ -108,9 +108,9 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-9 w-9">
-          <Download className="h-4 w-4" />
-          <span className="sr-only">Import Collection</span>
+        <Button variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Import Collection
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, FileDown } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Dialog,
@@ -97,7 +97,7 @@ export function ExportCollection({ collectionId }: ExportCollectionProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="icon" title="Export Collection">
-          <Download className="h-4 w-4" />
+          <FileDown className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

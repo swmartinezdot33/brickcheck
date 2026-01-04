@@ -85,15 +85,15 @@ export const metadata: Metadata = {
     images: [
       {
         url: '/BrickCheck Logo.png',
-        width: 2048,
-        height: 2048,
+        width: 1200,
+        height: 630,
         alt: 'BrickCheck - LEGO Collection Value Tracker App',
         type: 'image/png',
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "BrickCheck - Track Your LEGO Collection Like Stocks | The Best LEGO Collection App",
     description: "BrickCheck is the premier LEGO collection app for tracking your LEGO collection value like stocks. Download BrickCheck on iOS and Android to monitor prices, scan barcodes, and get alerts.",
     images: ['/BrickCheck Logo.png'],
