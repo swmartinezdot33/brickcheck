@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, Loader2, Package, ExternalLink, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
+import { Search, Loader2, Package, ExternalLink, Plus, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react'
 import { Set } from '@/types'
 import Link from 'next/link'
 import { SetImage } from '@/components/ui/SetImage'
@@ -142,8 +142,18 @@ export default function BrowsePage() {
               placeholder="Search by set number, name, or theme (e.g., 75192, Millennium Falcon, Star Wars)..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {query.length > 0 && query.length < 2 && (
