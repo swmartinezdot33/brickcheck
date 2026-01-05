@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { randomBytes } from 'crypto'
 
 // Share route handler for collection sharing
 // GET handler for debugging/health check
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -21,7 +21,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   console.log('[Share Route] POST request received')
@@ -85,7 +85,8 @@ export async function POST(
     }
 
     // Generate the full shareable URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin
+    const url = new URL(request.url)
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || url.origin
     const shareUrl = `${baseUrl}/share/${shareToken}`
 
     return NextResponse.json({
@@ -103,7 +104,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
