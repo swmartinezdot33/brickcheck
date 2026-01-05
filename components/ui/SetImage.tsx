@@ -15,17 +15,23 @@ interface SetImageProps {
  */
 export function SetImage({ src, alt, className = 'w-full h-full object-cover', containerClassName }: SetImageProps) {
   const [imageError, setImageError] = React.useState(false)
+  const [logoError, setLogoError] = React.useState(false)
 
   const hasImage = src && !imageError
 
   if (!hasImage) {
     return (
       <div className={containerClassName || 'w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground'}>
-        <img
-          src="/BrickCheck Logo.png"
-          alt="BrickCheck Logo"
-          className="w-12 h-12 object-contain opacity-50"
-        />
+        {!logoError ? (
+          <img
+            src="/BrickCheckLogo.png"
+            alt="BrickCheck Logo"
+            className="w-12 h-12 object-contain opacity-50"
+            onError={() => setLogoError(true)}
+          />
+        ) : (
+          <div className="w-12 h-12 flex items-center justify-center text-2xl opacity-30">🧱</div>
+        )}
       </div>
     )
   }
@@ -36,6 +42,8 @@ export function SetImage({ src, alt, className = 'w-full h-full object-cover', c
       alt={alt}
       className={className}
       onError={() => setImageError(true)}
+      loading="lazy"
+      decoding="async"
     />
   )
 }

@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     description: "BrickCheck is the premier LEGO collection app for tracking your LEGO collection value like stocks. Download BrickCheck on iOS and Android to monitor prices, scan barcodes, and get alerts. The best LEGO collection app for collectors and investors.",
     images: [
       {
-        url: '/BrickCheck Logo.png',
+        url: '/BrickCheckLogo.png',
         width: 1200,
         height: 630,
         alt: 'BrickCheck - LEGO Collection Value Tracker App',
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "BrickCheck - Track Your LEGO Collection Like Stocks | The Best LEGO Collection App",
     description: "BrickCheck is the premier LEGO collection app for tracking your LEGO collection value like stocks. Download BrickCheck on iOS and Android to monitor prices, scan barcodes, and get alerts.",
-    images: ['/BrickCheck Logo.png'],
+    images: ['/BrickCheckLogo.png'],
     creator: "@brickcheckapp",
     site: "@brickcheckapp",
   },

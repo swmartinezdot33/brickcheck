@@ -42,7 +42,7 @@ export default function LandingPage() {
         "url": "https://www.brickcheck.app",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://www.brickcheck.app/BrickCheck Logo.png",
+          "url": "https://www.brickcheck.app/BrickCheckLogo.png",
           "width": 512,
           "height": 512
         },
@@ -66,7 +66,7 @@ export default function LandingPage() {
           "priceCurrency": "USD"
         },
         "description": "BrickCheck is the best LEGO collection app for tracking your LEGO collection value like stocks. Monitor prices, scan barcodes, and get alerts when values change. Available on iOS and Android.",
-        "screenshot": "https://www.brickcheck.app/BrickCheck Logo.png",
+        "screenshot": "https://www.brickcheck.app/BrickCheckLogo.png",
         "featureList": [
           "Barcode scanning for LEGO sets",
           "Real-time price tracking",
@@ -213,7 +213,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2 sm:gap-3">
               <Image
-                src="/BrickCheck Logo.png"
+                src="/BrickCheckLogo.png"
                 alt="BrickCheck"
                 width={40}
                 height={40}

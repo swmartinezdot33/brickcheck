@@ -56,7 +56,7 @@ export function SignupForm() {
       <CardHeader>
         <div className="flex flex-col items-center mb-4">
           <Image
-            src="/BrickCheck Logo.png"
+            src="/BrickCheckLogo.png"
             alt="BrickCheck"
             width={80}
             height={80}
