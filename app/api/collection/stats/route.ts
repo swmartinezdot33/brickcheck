@@ -46,48 +46,132 @@ export async function GET(request: NextRequest) {
     const { data: items, error } = await query
 
     if (error) {
+      console.error('[Stats] Error fetching items:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Get unique set IDs
-    // @ts-ignore
-    const setIds = Array.from(new Set(items.map((item) => item.sets.id)))
+    // Handle empty collections
+    if (!items || items.length === 0) {
+      return NextResponse.json({
+        totalSets: 0,
+        sealedCount: 0,
+        usedCount: 0,
+        retiredCount: 0,
+        totalCostBasis: 0,
+        totalEstimatedValue: 0,
+        todayChange: 0,
+        todayPercentChange: 0,
+        thirtyDayChange: 0,
+        thirtyDayPercentChange: 0,
+        totalGain: 0,
+        totalGainPercent: 0,
+        portfolioCAGR: 0,
+        distributionByTheme: [],
+        distributionByYear: [],
+        topGainers: [],
+        topLosers: [],
+      })
+    }
 
-    // Fetch price snapshots for these sets (last 30 days to ensure we catch recent updates)
-    // We fetch more than just the latest to potentially calculate trends if needed, 
-    // but primarily we need the latest for current value.
-    const { data: snapshotsData } = await supabase
+    // Get unique set IDs, filtering out null sets
+    // Note: Supabase returns sets as an object (not array) when using relational select
+    const setIds = Array.from(
+      new Set(
+        items
+          .map((item: any) => {
+            const sets = item.sets as any
+            return sets?.id
+          })
+          .filter((id: any): id is string => id !== null && id !== undefined)
+      )
+    )
+
+    // Handle case where no valid set IDs found
+    if (setIds.length === 0) {
+      return NextResponse.json({
+        totalSets: items.reduce((sum, item) => sum + item.quantity, 0),
+        sealedCount: items.filter((item) => item.condition === 'SEALED').length,
+        usedCount: items.filter((item) => item.condition === 'USED').length,
+        retiredCount: items.filter((item) => {
+          const sets = item.sets as any
+          return sets?.retired === true
+        }).length,
+        totalCostBasis: items.reduce((sum, item) => {
+          if (item.acquisition_cost_cents) {
+            return sum + item.acquisition_cost_cents * item.quantity
+          }
+          return sum
+        }, 0),
+        totalEstimatedValue: 0,
+        todayChange: 0,
+        todayPercentChange: 0,
+        thirtyDayChange: 0,
+        thirtyDayPercentChange: 0,
+        totalGain: 0,
+        totalGainPercent: 0,
+        portfolioCAGR: 0,
+        distributionByTheme: [],
+        distributionByYear: [],
+        topGainers: [],
+        topLosers: [],
+      })
+    }
+
+    // Fetch price snapshots for these sets (last 90 days for historical comparison)
+    const { data: snapshotsData, error: snapshotsError } = await supabase
       .from('price_snapshots')
       .select('*')
       .in('set_id', setIds)
-      .gte('timestamp', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()) // Last 90 days
+      .gte('timestamp', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
       .order('timestamp', { ascending: false })
+
+    if (snapshotsError) {
+      console.error('[Stats] Error fetching price snapshots:', snapshotsError)
+      // Continue with empty snapshots - prices will be null
+    }
 
     const snapshots = (snapshotsData || []) as PriceSnapshot[]
 
     // Helper to get latest price for a set/condition
     const getLatestPrice = (setId: string, condition: string): number | null => {
-      const match = snapshots.find(
+      // Filter snapshots for this set and condition, then find the most recent
+      const relevantSnapshots = snapshots.filter(
         (s) => s.set_id === setId && s.condition === condition
       )
-      return match ? match.price_cents : null
+      if (relevantSnapshots.length === 0) return null
+      // Snapshots are already ordered by timestamp desc, so first one is latest
+      return relevantSnapshots[0]?.price_cents || null
     }
 
     // Helper to get price X days ago (approximate)
     const getHistoricalPrice = (setId: string, condition: string, daysAgo: number): number | null => {
       const targetDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
-      // Find snapshot closest to target date
-      // Snapshots are ordered desc, so we look for the first one that is <= targetDate? 
-      // Or just closest.
-      // Simple approach: find first snapshot that is on or before the target date.
-      const match = snapshots.find(
-        (s) => s.set_id === setId && s.condition === condition && new Date(s.timestamp) <= targetDate
+      
+      // Filter snapshots for this set and condition
+      const relevantSnapshots = snapshots.filter(
+        (s) => s.set_id === setId && s.condition === condition
       )
-      return match ? match.price_cents : null
+      
+      if (relevantSnapshots.length === 0) return null
+      
+      // Find snapshot closest to target date (on or before)
+      // Snapshots are ordered desc, so we look for the first one that is <= targetDate
+      const match = relevantSnapshots.find(
+        (s) => new Date(s.timestamp) <= targetDate
+      )
+      
+      // If no snapshot on/before target date, use the oldest one we have
+      return match ? match.price_cents : relevantSnapshots[relevantSnapshots.length - 1]?.price_cents || null
+    }
+
+    // Helper to get price 1 day ago for today's change
+    const getYesterdayPrice = (setId: string, condition: string): number | null => {
+      return getHistoricalPrice(setId, condition, 1)
     }
 
     let totalEstimatedValue = 0
     let totalEstimatedValue30DaysAgo = 0
+    let totalEstimatedValueYesterday = 0
     
     // Stats aggregators
     const distributionByTheme: Record<string, number> = {}
@@ -109,16 +193,26 @@ export async function GET(request: NextRequest) {
       imageUrl?: string
     }> = []
 
-    items?.forEach((item) => {
-      const set = item.sets as any
+    items?.forEach((item: any) => {
+      // Skip items without valid sets
+      // Supabase returns sets as an object (not array) when using relational select
+      const sets = item.sets as any
+      if (!sets || !sets.id) {
+        return
+      }
+
+      const set = sets
       const latestPrice = getLatestPrice(set.id, item.condition)
       const historicalPrice = getHistoricalPrice(set.id, item.condition, 30) || latestPrice // Fallback to current if no history
+      const yesterdayPrice = getYesterdayPrice(set.id, item.condition) || latestPrice // Fallback to current if no history
       
       const itemValue = (latestPrice || 0) * item.quantity
       const itemValue30DaysAgo = (historicalPrice || 0) * item.quantity
+      const itemValueYesterday = (yesterdayPrice || 0) * item.quantity
 
       totalEstimatedValue += itemValue
       totalEstimatedValue30DaysAgo += itemValue30DaysAgo
+      totalEstimatedValueYesterday += itemValueYesterday
 
       // Calculate price change for movers
       if (latestPrice && historicalPrice && latestPrice > 0) {
@@ -216,8 +310,13 @@ export async function GET(request: NextRequest) {
         return sum
       }, 0) || 0
 
-    const todayChange = 0 // Needs daily granularity snapshots for accurate daily change, skipping for now or use 24h
-    // Simple 30 day change
+    // Calculate today's change (compared to yesterday)
+    const todayChange = totalEstimatedValue - totalEstimatedValueYesterday
+    const todayPercentChange = totalEstimatedValueYesterday > 0 
+      ? (todayChange / totalEstimatedValueYesterday) * 100 
+      : 0
+    
+    // Calculate 30 day change
     const thirtyDayChange = totalEstimatedValue - totalEstimatedValue30DaysAgo
     const thirtyDayPercentChange = totalEstimatedValue30DaysAgo > 0 
       ? (thirtyDayChange / totalEstimatedValue30DaysAgo) * 100 
@@ -238,7 +337,7 @@ export async function GET(request: NextRequest) {
       totalCostBasis,
       totalEstimatedValue,
       todayChange,
-      todayPercentChange: 0,
+      todayPercentChange,
       thirtyDayChange,
       thirtyDayPercentChange,
       totalGain,
