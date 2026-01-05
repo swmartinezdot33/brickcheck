@@ -71,3 +71,4 @@ This bundles assets directly (no `server.url`).
 - **Development**: Can use `server.url` for live reload, but detection is tricky
 - **Detection works reliably** when assets are bundled because the app is truly native
 
+

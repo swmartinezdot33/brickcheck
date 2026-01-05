@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { FacebookMeta } from "@/components/FacebookMeta";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -139,6 +140,7 @@ export default function RootLayout({
             gtag('config', 'G-CQSY8FB6NG');
           `}
         </Script>
+        <FacebookMeta />
         <QueryProvider>
           {children}
         </QueryProvider>

@@ -91,3 +91,4 @@ export function PriceForecastCard({ setId, condition }: PriceForecastCardProps) 
 
 
 
+
