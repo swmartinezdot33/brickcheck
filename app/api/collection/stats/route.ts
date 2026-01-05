@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
           name,
           theme,
           year,
-          retired
+          retired,
+          msrp_cents
         )
       `
       )
@@ -132,15 +133,29 @@ export async function GET(request: NextRequest) {
 
     const snapshots = (snapshotsData || []) as PriceSnapshot[]
 
+    console.log(`[Stats] Found ${items?.length || 0} items, ${snapshots.length} price snapshots`)
+
     // Helper to get latest price for a set/condition
-    const getLatestPrice = (setId: string, condition: string): number | null => {
+    // Falls back to MSRP if no price snapshot exists
+    const getLatestPrice = (setId: string, condition: string, msrpCents?: number | null): number | null => {
       // Filter snapshots for this set and condition, then find the most recent
       const relevantSnapshots = snapshots.filter(
         (s) => s.set_id === setId && s.condition === condition
       )
-      if (relevantSnapshots.length === 0) return null
-      // Snapshots are already ordered by timestamp desc, so first one is latest
-      return relevantSnapshots[0]?.price_cents || null
+      if (relevantSnapshots.length > 0) {
+        // Snapshots are already ordered by timestamp desc, so first one is latest
+        return relevantSnapshots[0]?.price_cents || null
+      }
+      // Fallback to MSRP if no price snapshot (use MSRP for SEALED, estimate 60% for USED)
+      if (msrpCents && msrpCents > 0) {
+        if (condition === 'SEALED') {
+          return msrpCents
+        } else if (condition === 'USED') {
+          // Estimate used price at 60% of MSRP
+          return Math.round(msrpCents * 0.6)
+        }
+      }
+      return null
     }
 
     // Helper to get price X days ago (approximate)
@@ -202,7 +217,7 @@ export async function GET(request: NextRequest) {
       }
 
       const set = sets
-      const latestPrice = getLatestPrice(set.id, item.condition)
+      const latestPrice = getLatestPrice(set.id, item.condition, set.msrp_cents)
       const historicalPrice = getHistoricalPrice(set.id, item.condition, 30) || latestPrice // Fallback to current if no history
       const yesterdayPrice = getYesterdayPrice(set.id, item.condition) || latestPrice // Fallback to current if no history
       
@@ -214,8 +229,28 @@ export async function GET(request: NextRequest) {
       totalEstimatedValue30DaysAgo += itemValue30DaysAgo
       totalEstimatedValueYesterday += itemValueYesterday
 
+      // Distribution should include items even if using MSRP fallback
+      // Only exclude if truly no price data at all
+      if (itemValue > 0) {
+        if (set.theme) {
+          distributionByTheme[set.theme] = (distributionByTheme[set.theme] || 0) + itemValue
+        }
+        if (set.year) {
+          distributionByYear[set.year] = (distributionByYear[set.year] || 0) + itemValue
+        }
+      }
+
       // Calculate price change for movers
-      if (latestPrice && historicalPrice && latestPrice > 0) {
+      // Only include if we have both current and historical prices from snapshots (not MSRP fallback)
+      // Check if we have actual snapshot data, not just MSRP fallback
+      const hasHistoricalSnapshot = snapshots.some(
+        (s) => s.set_id === set.id && s.condition === item.condition && new Date(s.timestamp) <= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      )
+      const hasCurrentSnapshot = snapshots.some(
+        (s) => s.set_id === set.id && s.condition === item.condition
+      )
+      
+      if (hasCurrentSnapshot && hasHistoricalSnapshot && latestPrice && historicalPrice && latestPrice > 0) {
         const priceChange = latestPrice - historicalPrice
         const pricePercentChange = (priceChange / historicalPrice) * 100
         
@@ -230,16 +265,6 @@ export async function GET(request: NextRequest) {
           change: priceChange,
           percentChange: pricePercentChange,
         })
-      }
-
-      // Distribution
-      if (itemValue > 0) {
-        if (set.theme) {
-          distributionByTheme[set.theme] = (distributionByTheme[set.theme] || 0) + itemValue
-        }
-        if (set.year) {
-          distributionByYear[set.year] = (distributionByYear[set.year] || 0) + itemValue
-        }
       }
 
       // CAGR Calculation
