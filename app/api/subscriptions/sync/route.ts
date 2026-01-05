@@ -104,8 +104,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-
-import { createClient } from '@/lib/supabase/server'
-import { getAppleSubscriptionStatus } from '@/lib/subscriptions/apple'
-import { getGoogleSubscriptionStatus } from '@/lib/subscriptions/google'
-

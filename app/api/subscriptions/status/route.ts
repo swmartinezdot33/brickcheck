@@ -130,9 +130,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
-
-import { createClient } from '@/lib/supabase/server'
-import { getAppleSubscriptionStatus } from '@/lib/subscriptions/apple'
-import { getGoogleSubscriptionStatus } from '@/lib/subscriptions/google'
-
