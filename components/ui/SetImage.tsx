@@ -38,6 +38,9 @@ export function SetImage({ src, alt, className = 'w-full h-full object-cover', c
       onError={() => setImageError(true)}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
+      width={width}
+      height={height}
+      style={{ width: '100%', height: '100%' }}
     />
   )
 }
