@@ -19,7 +19,7 @@ export async function generateMetadata({
     // Fetch collection data for metadata
     const { data: collection } = await supabase
       .from('collections')
-      .select('name, description, user_id')
+      .select('id, name, description, user_id')
       .eq('share_token', token)
       .eq('is_public', true)
       .single()
