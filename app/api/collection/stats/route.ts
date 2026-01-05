@@ -134,6 +134,11 @@ export async function GET(request: NextRequest) {
     const snapshots = (snapshotsData || []) as PriceSnapshot[]
 
     console.log(`[Stats] Found ${items?.length || 0} items, ${snapshots.length} price snapshots`)
+    
+    // Count items with/without price data for debugging
+    let itemsWithSnapshots = 0
+    let itemsUsingMSRP = 0
+    let itemsWithNoPrice = 0
 
     // Helper to get latest price for a set/condition
     // Falls back to MSRP if no price snapshot exists
@@ -217,9 +222,19 @@ export async function GET(request: NextRequest) {
       }
 
       const set = sets
+      const hasSnapshot = snapshots.some(
+        (s) => s.set_id === set.id && s.condition === item.condition
+      )
+      
+      if (hasSnapshot) itemsWithSnapshots++
+      else if (set.msrp_cents && set.msrp_cents > 0) itemsUsingMSRP++
+      else itemsWithNoPrice++
+      
       const latestPrice = getLatestPrice(set.id, item.condition, set.msrp_cents)
       const historicalPrice = getHistoricalPrice(set.id, item.condition, 30) || latestPrice // Fallback to current if no history
       const yesterdayPrice = getYesterdayPrice(set.id, item.condition) || latestPrice // Fallback to current if no history
+      
+      console.log(`[Stats] Set ${set.set_number} (${item.condition}): price=${latestPrice}, msrp=${set.msrp_cents}, hasSnapshot=${hasSnapshot}`)
       
       const itemValue = (latestPrice || 0) * item.quantity
       const itemValue30DaysAgo = (historicalPrice || 0) * item.quantity
@@ -284,6 +299,11 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+
+    console.log(`[Stats] Price data: ${itemsWithSnapshots} with snapshots, ${itemsUsingMSRP} using MSRP, ${itemsWithNoPrice} with no price`)
+    console.log(`[Stats] Total estimated value: ${totalEstimatedValue}`)
+    console.log(`[Stats] Distribution themes: ${Object.keys(distributionByTheme).length}, years: ${Object.keys(distributionByYear).length}`)
+    console.log(`[Stats] Movers: ${moversData.length} items with price changes`)
 
     // Get biggest movers - top 5 gainers and top 5 losers
     const sortedByChange = [...moversData].sort((a, b) => b.change - a.change)
