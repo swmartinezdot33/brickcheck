@@ -99,10 +99,13 @@ export async function POST(
     console.log('[Share Route] Collection found:', collection.id)
 
     // Generate a new token if one doesn't exist, otherwise reuse existing
+    // Each collection has its own unique share_token (enforced by UNIQUE constraint in DB)
+    // This ensures each collection gets its own unique share link
     let shareToken = collection.share_token
 
     if (!shareToken) {
       // Generate a cryptographically secure random token (32 bytes = 64 hex characters)
+      // The UNIQUE constraint on share_token ensures this token is unique across all collections
       shareToken = randomBytes(32).toString('hex')
     }
 
