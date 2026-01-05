@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function GET(
   request: NextRequest,
@@ -25,12 +26,35 @@ export async function GET(
     }
 
     // Fetch the user's display name from their profile
-    // This requires an RLS policy that allows public access for users with public collections
-    const { data: userProfile } = await supabase
+    // Use service role client to bypass RLS since we've already verified the collection is public
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
+    const { data: userProfile, error: profileError } = await serviceClient
       .from('user_profiles')
       .select('display_name')
       .eq('user_id', collection.user_id)
       .single()
+
+    if (profileError) {
+      console.error('[Share API] Error fetching user profile:', profileError)
+      console.error('[Share API] User ID:', collection.user_id)
+      console.error('[Share API] Error code:', profileError.code)
+      console.error('[Share API] Error message:', profileError.message)
+    } else {
+      console.log('[Share API] User profile fetched:', { 
+        user_id: collection.user_id, 
+        display_name: userProfile?.display_name || 'null' 
+      })
+    }
 
     // Fetch collection items with set data
     // Filter out sensitive fields: acquisition_cost_cents, acquisition_date, notes
