@@ -323,7 +323,7 @@ export default function BrowsePage() {
                         Add to Collection
                       </Button>
                       <Button className="flex-1" variant="outline" asChild>
-                        <Link href={`/browse/${set.id || set.set_number}?${searchParams.toString()}`}>
+                        <Link href={`/browse/${set.id || set.set_number}?${searchParams.toString()}`} preserveSearchParams>
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Details
                         </Link>

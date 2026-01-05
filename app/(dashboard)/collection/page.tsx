@@ -45,12 +45,12 @@ export default function CollectionPage() {
         </div>
         <div className="hidden md:flex items-center gap-2">
           <CollectionSwitcher />
-          <Button asChild>
-            <Link href="/browse">
-              <Plus className="h-4 w-4 mr-2" />
-              Browse & Add Sets
-            </Link>
-          </Button>
+                <Button asChild>
+                  <Link href={collectionId ? `/browse?collectionId=${collectionId}` : '/browse'}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Browse & Add Sets
+                  </Link>
+                </Button>
           <div className="flex items-center gap-1">
             {currentCollection && (
               <ShareCollection
@@ -82,12 +82,12 @@ export default function CollectionPage() {
             <ImportCollection collectionId={collectionId} />
           </div>
         </div>
-        <Button asChild className="w-full">
-          <Link href="/browse">
-            <Plus className="h-4 w-4 mr-2" />
-            Browse & Add Sets
-          </Link>
-        </Button>
+              <Button asChild className="w-full">
+                <Link href={collectionId ? `/browse?collectionId=${collectionId}` : '/browse'}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Browse & Add Sets
+                </Link>
+              </Button>
       </div>
 
       <Card className="border-2 border-primary/20 bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/20">
