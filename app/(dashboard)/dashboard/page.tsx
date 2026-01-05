@@ -1,17 +1,30 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingUp, TrendingDown, Package, DollarSign, Loader2, BarChart3 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { DistributionChart } from '@/components/collection/DistributionChart'
 import { CollectionSwitcher } from '@/components/collection/CollectionSwitcher'
 import { BiggestMovers } from '@/components/collection/BiggestMovers'
+import { getCollectionIdFromUrlOrStorage } from '@/lib/utils/collection'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const collectionId = searchParams.get('collectionId')
+  const collectionId = getCollectionIdFromUrlOrStorage(searchParams)
+
+  // Sync collectionId from localStorage to URL if not present
+  useEffect(() => {
+    const urlCollectionId = searchParams.get('collectionId')
+    if (!urlCollectionId && collectionId && typeof window !== 'undefined') {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('collectionId', collectionId)
+      router.replace(`/dashboard?${params.toString()}`, { scroll: false })
+    }
+  }, [collectionId, searchParams, router])
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['collection-stats', collectionId],

@@ -31,13 +31,35 @@ export default function BrowsePage() {
   const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1', 10))
   const [retiredFilter, setRetiredFilter] = useState<'all' | 'active' | 'retired'>((searchParams.get('filter') as 'all' | 'active' | 'retired') || 'all')
 
+  // Sync collectionId from localStorage to URL if not present
+  useEffect(() => {
+    const urlCollectionId = searchParams.get('collectionId')
+    if (!urlCollectionId && typeof window !== 'undefined') {
+      try {
+        const storedCollectionId = localStorage.getItem('brickcheck_selected_collection_id')
+        if (storedCollectionId) {
+          const params = new URLSearchParams(searchParams.toString())
+          params.set('collectionId', storedCollectionId)
+          router.replace(`/browse?${params.toString()}`, { scroll: false })
+        }
+      } catch (error) {
+        // Ignore localStorage errors
+      }
+    }
+  }, [searchParams, router])
+
   // Update URL when search state changes (debounced to avoid too many updates)
   useEffect(() => {
-    const params = new URLSearchParams()
+    const params = new URLSearchParams(searchParams.toString())
+    // Preserve collectionId if it exists
     if (query) params.set('q', query)
+    else params.delete('q')
     if (itemsPerPage !== 25) params.set('perPage', itemsPerPage.toString())
+    else params.delete('perPage')
     if (currentPage !== 1) params.set('page', currentPage.toString())
+    else params.delete('page')
     if (retiredFilter !== 'all') params.set('filter', retiredFilter)
+    else params.delete('filter')
     
     const newQueryString = params.toString()
     const currentQueryString = searchParams.toString()

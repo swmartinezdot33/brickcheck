@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { getCollectionIdFromUrlOrStorage, buildUrlWithCollectionId } from '@/lib/utils/collection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollectionList } from '@/components/collection/CollectionList'
@@ -17,10 +18,21 @@ import { ShareCollection } from '@/components/collection/ShareCollection'
 import { useQuery } from '@tanstack/react-query'
 
 export default function CollectionPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const collectionId = searchParams.get('collectionId')
+  const collectionId = getCollectionIdFromUrlOrStorage(searchParams)
   const [editingItem, setEditingItem] = useState<CollectionItemWithSet | null>(null)
   const [retiredFilter, setRetiredFilter] = useState<'all' | 'retired' | 'active'>('all')
+
+  // Sync collectionId from localStorage to URL if not present
+  useEffect(() => {
+    const urlCollectionId = searchParams.get('collectionId')
+    if (!urlCollectionId && collectionId && typeof window !== 'undefined') {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('collectionId', collectionId)
+      router.replace(`/collection?${params.toString()}`, { scroll: false })
+    }
+  }, [collectionId, searchParams, router])
 
   // Fetch current collection to get sharing status
   const { data: collections } = useQuery({
@@ -46,7 +58,7 @@ export default function CollectionPage() {
         <div className="hidden md:flex items-center gap-2">
           <CollectionSwitcher />
                 <Button asChild>
-                  <Link href={collectionId ? `/browse?collectionId=${collectionId}` : '/browse'}>
+                  <Link href={buildUrlWithCollectionId('/browse', collectionId)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Browse & Add Sets
                   </Link>
@@ -83,7 +95,7 @@ export default function CollectionPage() {
           </div>
         </div>
               <Button asChild className="w-full">
-                <Link href={collectionId ? `/browse?collectionId=${collectionId}` : '/browse'}>
+                <Link href={buildUrlWithCollectionId('/browse', collectionId)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Browse & Add Sets
                 </Link>

@@ -1,10 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { getCollectionIdFromUrlOrStorage, setSelectedCollectionId, buildUrlWithCollectionId } from '@/lib/utils/collection'
 import {
   Command,
   CommandEmpty,
@@ -39,6 +40,7 @@ interface Collection {
 
 export function CollectionSwitcher() {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [open, setOpen] = React.useState(false)
   const [showNewDialog, setShowNewDialog] = React.useState(false)
@@ -47,12 +49,24 @@ export function CollectionSwitcher() {
   const [newCollectionName, setNewCollectionName] = React.useState('')
   const [creating, setCreating] = React.useState(false)
 
-  const selectedCollectionId = searchParams.get('collectionId')
+  // Get collection ID from URL or localStorage (URL takes precedence)
+  const selectedCollectionId = React.useMemo(() => {
+    return getCollectionIdFromUrlOrStorage(searchParams)
+  }, [searchParams])
+  
   const selectedCollection = collections.find((c) => c.id === selectedCollectionId) || collections[0]
 
   React.useEffect(() => {
     fetchCollections()
   }, [])
+
+  // Sync URL with localStorage if we have a collection ID from storage but not in URL
+  React.useEffect(() => {
+    if (selectedCollectionId && !searchParams.get('collectionId') && collections.length > 0) {
+      const url = buildUrlWithCollectionId(pathname, selectedCollectionId, searchParams)
+      router.replace(url, { scroll: false })
+    }
+  }, [selectedCollectionId, searchParams, pathname, router, collections.length])
 
   const fetchCollections = async () => {
     try {
@@ -70,9 +84,11 @@ export function CollectionSwitcher() {
 
   const handleSelect = (collection: Collection) => {
     setOpen(false)
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('collectionId', collection.id)
-    router.push(`?${params.toString()}`)
+    // Save to localStorage for persistence across pages
+    setSelectedCollectionId(collection.id)
+    // Update URL with collection ID
+    const url = buildUrlWithCollectionId(pathname, collection.id, searchParams)
+    router.push(url)
   }
 
   const handleCreate = async () => {

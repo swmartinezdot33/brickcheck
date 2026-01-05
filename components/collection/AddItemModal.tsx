@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Set, Collection } from '@/types'
 import { useSearchParams } from 'next/navigation'
+import { getCollectionIdFromUrlOrStorage } from '@/lib/utils/collection'
 
 interface AddItemModalProps {
   open: boolean
@@ -32,7 +33,8 @@ interface AddItemModalProps {
 export function AddItemModal({ open, onOpenChange, set, onSuccess }: AddItemModalProps) {
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
-  const defaultCollectionId = searchParams.get('collectionId')
+  // Get collection ID from URL or localStorage (URL takes precedence)
+  const defaultCollectionId = getCollectionIdFromUrlOrStorage(searchParams)
 
   const [condition, setCondition] = useState<'SEALED' | 'USED'>('SEALED')
   const [conditionGrade, setConditionGrade] = useState<string>('')

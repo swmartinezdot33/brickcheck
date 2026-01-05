@@ -1,10 +1,11 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { LayoutGrid, Search, Scan, Package, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import { getCollectionIdFromUrlOrStorage, buildUrlWithCollectionId } from '@/lib/utils/collection'
 
 interface NavItem {
   href: string
@@ -48,11 +49,16 @@ const navItems: NavItem[] = [
 
 export function BottomNav() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
+  const [collectionId, setCollectionId] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Get collection ID from URL or localStorage
+    const id = getCollectionIdFromUrlOrStorage(searchParams)
+    setCollectionId(id)
+  }, [searchParams])
 
   if (!mounted) return null
 
@@ -70,11 +76,12 @@ export function BottomNav() {
       <div className="flex items-center justify-around h-16 safe-area-inset-bottom">
         {navItems.map((item) => {
           const isActive = item.activeMatch(pathname)
+          const linkHref = mounted ? buildUrlWithCollectionId(item.href, collectionId) : item.href
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={linkHref}
               className={cn(
                 'flex flex-col items-center justify-center h-full flex-1 gap-1 transition-colors',
                 isActive

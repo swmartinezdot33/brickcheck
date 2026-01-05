@@ -1,8 +1,9 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { getCollectionIdFromUrlOrStorage, buildUrlWithCollectionId } from '@/lib/utils/collection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -25,9 +26,20 @@ export default function BrowseSetDetailPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const collectionId = getCollectionIdFromUrlOrStorage(searchParams)
 
-  // Build back URL with search params if they exist
-  const backUrl = searchParams.toString() ? `/browse?${searchParams.toString()}` : '/browse'
+  // Sync collectionId from localStorage to URL if not present
+  useEffect(() => {
+    const urlCollectionId = searchParams.get('collectionId')
+    if (!urlCollectionId && collectionId && typeof window !== 'undefined') {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('collectionId', collectionId)
+      router.replace(`/browse/${setId}?${params.toString()}`, { scroll: false })
+    }
+  }, [collectionId, searchParams, router, setId])
+
+  // Build back URL with search params and collectionId
+  const backUrl = buildUrlWithCollectionId('/browse', collectionId, searchParams)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['set-detail', setId],

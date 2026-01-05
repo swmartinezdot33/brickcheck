@@ -2,22 +2,28 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { LayoutDashboard, Package, Scan, Settings, LogOut, Search, Menu, X, User } from 'lucide-react'
+import { getCollectionIdFromUrlOrStorage, buildUrlWithCollectionId } from '@/lib/utils/collection'
 
 export function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [collectionId, setCollectionId] = useState<string | null>(null)
 
   // Prevent hydration mismatch by only using pathname after mount
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Get collection ID from URL or localStorage
+    const id = getCollectionIdFromUrlOrStorage(searchParams)
+    setCollectionId(id)
+  }, [searchParams])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -50,7 +56,10 @@ export function Navbar() {
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
               
-              <Link href="/dashboard" className="text-xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+              <Link 
+                href={mounted ? buildUrlWithCollectionId('/dashboard', collectionId) : '/dashboard'} 
+                className="text-xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent"
+              >
                 BrickCheck
               </Link>
               
@@ -59,10 +68,11 @@ export function Navbar() {
                 {navLinks.map((link) => {
                   const Icon = link.icon
                   const isActive = mounted && pathname === link.href
+                  const linkHref = mounted ? buildUrlWithCollectionId(link.href, collectionId) : link.href
                   return (
                     <Link
                       key={link.href}
-                      href={link.href}
+                      href={linkHref}
                       className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all ${
                         isActive
                           ? 'text-foreground bg-accent'
@@ -118,10 +128,11 @@ export function Navbar() {
                   {navLinks.map((link) => {
                     const Icon = link.icon
                     const isActive = mounted && pathname === link.href
+                    const linkHref = mounted ? buildUrlWithCollectionId(link.href, collectionId) : link.href
                     return (
                       <Link
                         key={link.href}
-                        href={link.href}
+                        href={linkHref}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 text-base font-medium rounded-lg transition-all ${
                           isActive
