@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Share2, Copy, Check, Link2, X, AlertCircle } from 'lucide-react'
@@ -30,14 +30,25 @@ export function ShareCollection({
 }: ShareCollectionProps) {
   const [open, setOpen] = useState(false)
   const [isPublic, setIsPublic] = useState(initialIsPublic)
-  const [shareUrl, setShareUrl] = useState<string | null>(
-    initialShareToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${initialShareToken}` : null
-  )
+  // Build shareUrl from current props, recalculate when props change
+  const shareUrl = initialShareToken 
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${initialShareToken}` 
+    : null
+  const [displayShareUrl, setDisplayShareUrl] = useState<string | null>(shareUrl)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  // Update display URL when props change
+  useEffect(() => {
+    const newUrl = initialShareToken 
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${initialShareToken}` 
+      : null
+    setDisplayShareUrl(newUrl)
+    setIsPublic(initialIsPublic)
+  }, [initialShareToken, initialIsPublic])
 
   const handleGenerateShareLink = async () => {
     setLoading(true)
@@ -53,7 +64,7 @@ export function ShareCollection({
       }
 
       const data = await res.json()
-      setShareUrl(data.shareUrl)
+      setDisplayShareUrl(data.shareUrl)
       setIsPublic(true)
       setSuccessMessage('Share link generated! Your collection is now publicly viewable.')
       // Invalidate collections query to refresh data
@@ -79,7 +90,7 @@ export function ShareCollection({
         throw new Error('Failed to revoke share link')
       }
 
-      setShareUrl(null)
+      setDisplayShareUrl(null)
       setIsPublic(false)
       setSuccessMessage('Sharing revoked. Your collection is no longer publicly viewable.')
       // Invalidate collections query to refresh data
@@ -93,10 +104,10 @@ export function ShareCollection({
   }
 
   const handleCopyLink = async () => {
-    if (!shareUrl) return
+    if (!displayShareUrl) return
 
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(displayShareUrl)
       setCopied(true)
       setSuccessMessage('Link copied to clipboard!')
       setTimeout(() => {
@@ -138,14 +149,14 @@ export function ShareCollection({
               {successMessage}
             </div>
           )}
-          {isPublic && shareUrl ? (
+          {isPublic && displayShareUrl ? (
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="share-url">Share Link</Label>
                 <div className="flex gap-2">
                   <Input
                     id="share-url"
-                    value={shareUrl}
+                    value={displayShareUrl}
                     readOnly
                     className="font-mono text-sm"
                   />
@@ -153,7 +164,7 @@ export function ShareCollection({
                     variant="outline"
                     size="icon"
                     onClick={handleCopyLink}
-                    disabled={!shareUrl}
+                    disabled={!displayShareUrl}
                   >
                     {copied ? (
                       <Check className="h-4 w-4 text-green-500" />
