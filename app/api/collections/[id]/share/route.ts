@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { randomBytes } from 'crypto'
 
+// GET handler for debugging/health check
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    return NextResponse.json({ 
+      message: 'Share route is working',
+      collectionId: id,
+      methods: ['POST', 'DELETE']
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Route error' }, { status: 500 })
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
