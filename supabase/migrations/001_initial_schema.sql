@@ -120,3 +120,4 @@ CREATE TRIGGER update_alerts_updated_at BEFORE UPDATE ON alerts
 
 
 
+

@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ interface CollectionListProps {
 
 export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: CollectionListProps) {
   const queryClient = useQueryClient()
+  const [failedImages, setFailedImages] = React.useState<Set<string>>(new Set())
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['collection', collectionId],
@@ -119,20 +121,20 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
             {/* Image - Clickable Square */}
             {item.sets?.id && (
               <Link href={`/set/${item.sets.id}`} className="mb-4">
-                <div className="relative aspect-square bg-muted rounded-lg overflow-hidden border border-primary/10 group-hover:border-primary/30 transition-colors">
-                  {item.sets?.image_url ? (
+                <div className="relative aspect-square bg-muted rounded-lg overflow-hidden border border-primary/10 group-hover:border-primary/30 transition-colors flex items-center justify-center">
+                  {item.sets?.image_url && !failedImages.has(item.sets.image_url) ? (
                     <img
                       src={item.sets.image_url}
                       alt={item.sets.name || 'Set image'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
+                      onError={() => {
+                        if (item.sets?.image_url) {
+                          setFailedImages(prev => new Set(prev).add(item.sets!.image_url!))
+                        }
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="h-12 w-12 text-muted-foreground" />
-                    </div>
+                    <Package className="h-12 w-12 text-muted-foreground" />
                   )}
                 </div>
               </Link>

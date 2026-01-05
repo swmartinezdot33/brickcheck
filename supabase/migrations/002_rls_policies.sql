@@ -80,3 +80,4 @@ CREATE POLICY "Audit logs are insertable by service role only" ON audit_log
 
 
 
+

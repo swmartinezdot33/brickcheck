@@ -73,3 +73,4 @@ If you need to rebuild after Capacitor sync:
 3. Run `./gradlew bundleRelease` to build the bundle
 
 
+

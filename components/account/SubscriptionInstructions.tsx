@@ -226,3 +226,4 @@ export function SubscriptionInstructions({ platform }: SubscriptionInstructionsP
     </Card>
   )
 }
+
