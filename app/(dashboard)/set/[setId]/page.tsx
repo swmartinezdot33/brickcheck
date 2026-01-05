@@ -24,10 +24,14 @@ export default function SetDetailPage({
   const { data, isLoading, error } = useQuery({
     queryKey: ['set-detail', setId],
     queryFn: async () => {
-      const res = await fetch(`/api/set/${setId}`)
+      const res = await fetch(`/api/set/${setId}`, {
+        next: { revalidate: 300 }, // Cache for 5 minutes
+      })
       if (!res.ok) throw new Error('Failed to fetch set details')
       return res.json()
     },
+    staleTime: 300000, // 5 minutes
+    gcTime: 600000, // 10 minutes
   })
 
   if (isLoading) {
