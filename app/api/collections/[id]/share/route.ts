@@ -23,19 +23,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log('[Share Route] POST request received')
   try {
+    const { id } = await params
+    console.log('[Share Route] Collection ID:', id)
+    
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log('[Share Route] Unauthorized - no user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    console.log('[Share Route] User authenticated:', user.id)
 
     if (!id) {
+      console.log('[Share Route] Missing collection ID')
       return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 })
     }
 
