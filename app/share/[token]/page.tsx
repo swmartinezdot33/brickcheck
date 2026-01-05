@@ -1,6 +1,6 @@
 'use client'
 
-import { use } from 'react'
+import { Suspense, use } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -42,12 +42,7 @@ interface SharedCollection {
   itemCount: number
 }
 
-export default function ShareCollectionPage({
-  params,
-}: {
-  params: Promise<{ token: string }>
-}) {
-  const { token } = use(params)
+function ShareCollectionContent({ token }: { token: string }) {
 
   const { data, isLoading, error } = useQuery<SharedCollection>({
     queryKey: ['shared-collection', token],
@@ -205,6 +200,29 @@ export default function ShareCollectionPage({
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ShareCollectionPage({
+  params,
+}: {
+  params: Promise<{ token: string }>
+}) {
+  const { token } = use(params)
+
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardContent className="p-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading collection...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <ShareCollectionContent token={token} />
+    </Suspense>
   )
 }
 
