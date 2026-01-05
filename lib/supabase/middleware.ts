@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
     '/privacy',
     '/terms',
     '/support',
+    '/share',
   ]
 
   if (

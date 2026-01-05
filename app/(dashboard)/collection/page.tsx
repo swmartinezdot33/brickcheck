@@ -13,12 +13,26 @@ import Link from 'next/link'
 import { ImportCollection } from '@/components/collection/ImportCollection'
 import { ExportCollection } from '@/components/collection/ExportCollection'
 import { CollectionSwitcher } from '@/components/collection/CollectionSwitcher'
+import { ShareCollection } from '@/components/collection/ShareCollection'
+import { useQuery } from '@tanstack/react-query'
 
 export default function CollectionPage() {
   const searchParams = useSearchParams()
   const collectionId = searchParams.get('collectionId')
   const [editingItem, setEditingItem] = useState<CollectionItemWithSet | null>(null)
   const [retiredFilter, setRetiredFilter] = useState<'all' | 'retired' | 'active'>('all')
+
+  // Fetch current collection to get sharing status
+  const { data: collections } = useQuery({
+    queryKey: ['collections'],
+    queryFn: async () => {
+      const res = await fetch('/api/collections')
+      if (!res.ok) throw new Error('Failed to fetch collections')
+      return res.json()
+    },
+  })
+
+  const currentCollection = collections?.find((c: any) => c.id === collectionId) || collections?.[0]
 
   return (
     <div className="space-y-4 md:space-y-8">
@@ -38,6 +52,14 @@ export default function CollectionPage() {
             </Link>
           </Button>
           <div className="flex items-center gap-1">
+            {currentCollection && (
+              <ShareCollection
+                collectionId={currentCollection.id}
+                collectionName={currentCollection.name}
+                isPublic={currentCollection.is_public || false}
+                shareToken={currentCollection.share_token || null}
+              />
+            )}
             <ExportCollection collectionId={collectionId} />
             <ImportCollection collectionId={collectionId} />
           </div>
@@ -48,6 +70,14 @@ export default function CollectionPage() {
         <div className="flex gap-2">
           <CollectionSwitcher />
           <div className="flex items-center gap-1 ml-auto">
+            {currentCollection && (
+              <ShareCollection
+                collectionId={currentCollection.id}
+                collectionName={currentCollection.name}
+                isPublic={currentCollection.is_public || false}
+                shareToken={currentCollection.share_token || null}
+              />
+            )}
             <ExportCollection collectionId={collectionId} />
             <ImportCollection collectionId={collectionId} />
           </div>

@@ -47,6 +47,8 @@ export type Database = {
           user_id: string
           name: string
           description: string | null
+          share_token: string | null
+          is_public: boolean
           created_at: string
           updated_at: string
         }
