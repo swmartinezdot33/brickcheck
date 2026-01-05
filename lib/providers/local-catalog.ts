@@ -118,11 +118,27 @@ export class LocalCatalogProvider implements CatalogProvider {
 
   async searchSets(query: string, limit: number = 100): Promise<SetMetadata[]> {
     // 1. Search local database first
-    const { data: dbResults, error } = await this.supabase
+    // 1. Search local database first - search name and set_number separately
+    const { data: nameResults } = await this.supabase
       .from('sets')
       .select('*')
-      .or(`name.ilike.%${query}%,set_number.ilike.%${query}%`)
+      .ilike('name', `%${query}%`)
       .limit(limit)
+    
+    const { data: numberResults } = await this.supabase
+      .from('sets')
+      .select('*')
+      .ilike('set_number', `%${query}%`)
+      .limit(limit)
+    
+    // Combine and deduplicate by id
+    const allResults = [...(nameResults || []), ...(numberResults || [])]
+    const uniqueResults = Array.from(
+      new Map(allResults.map((item) => [item.id, item])).values()
+    ).slice(0, limit)
+    
+    const dbResults = uniqueResults
+    const error = null
 
     if (error) {
       console.error('[LocalCatalogProvider] Database search error:', error)

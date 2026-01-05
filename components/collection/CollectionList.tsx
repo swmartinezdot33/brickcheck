@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Edit, Package } from 'lucide-react'
+import { Trash2, Edit, Package, Eye } from 'lucide-react'
 import { CollectionItemWithSet } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import Link from 'next/link'
 
 interface CollectionListProps {
   onEdit?: (item: CollectionItemWithSet) => void
@@ -116,23 +117,25 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
         <Card key={item.id}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between gap-4">
-              {/* Thumbnail Image */}
-              {item.sets?.image_url ? (
-                <div className="flex-shrink-0">
-                  <img
-                    src={item.sets.image_url}
-                    alt={item.sets.name || 'Set image'}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-primary/10"
-                    onError={(e) => {
-                      // Hide image if it fails to load
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-muted flex items-center justify-center border-2 border-primary/10">
-                  <Package className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
-                </div>
+              {/* Thumbnail Image - Clickable */}
+              {item.sets?.id && (
+                <Link href={`/set/${item.sets.id}`} className="flex-shrink-0 hover:opacity-75 transition-opacity">
+                  {item.sets?.image_url ? (
+                    <img
+                      src={item.sets.image_url}
+                      alt={item.sets.name || 'Set image'}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-primary/10 cursor-pointer"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-muted flex items-center justify-center border-2 border-primary/10 cursor-pointer">
+                      <Package className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                </Link>
               )}
               
               <div className="flex-1 min-w-0">
@@ -171,12 +174,24 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
                   <p className="text-sm text-muted-foreground mt-2">{item.notes}</p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
+                {/* View Details Button */}
+                {item.sets?.id && (
+                  <Button variant="ghost" size="sm" asChild title="View set details">
+                    <Link href={`/set/${item.sets.id}`}>
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
+                
+                {/* Edit Button */}
                 {onEdit && (
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(item)}>
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(item)} title="Edit item">
                     <Edit className="h-4 w-4" />
                   </Button>
                 )}
+                
+                {/* Delete Button */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -185,6 +200,7 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
                       deleteMutation.mutate(item.id)
                     }
                   }}
+                  title="Delete item"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
