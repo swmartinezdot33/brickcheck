@@ -14,16 +14,30 @@ export async function GET(
     const supabase = await createClient()
 
     // First, verify the collection exists and is public
+    // Log the token being searched for debugging
+    console.log('[Share API] Looking up collection with token:', token)
+    
     const { data: collection, error: collectionError } = await supabase
       .from('collections')
-      .select('id, name, description, user_id, created_at, updated_at')
+      .select('id, name, description, user_id, created_at, updated_at, share_token')
       .eq('share_token', token)
       .eq('is_public', true)
       .single()
 
     if (collectionError || !collection) {
+      console.error('[Share API] Collection not found:', {
+        token,
+        error: collectionError?.message,
+        code: collectionError?.code,
+      })
       return NextResponse.json({ error: 'Collection not found or not shared' }, { status: 404 })
     }
+
+    console.log('[Share API] Found collection:', {
+      id: collection.id,
+      name: collection.name,
+      share_token: collection.share_token,
+    })
 
     // Fetch the user's display name from their profile
     // Use service role client to bypass RLS since we've already verified the collection is public

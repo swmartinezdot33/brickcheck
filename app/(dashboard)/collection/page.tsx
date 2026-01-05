@@ -44,7 +44,11 @@ export default function CollectionPage() {
     },
   })
 
-  const currentCollection = collections?.find((c: any) => c.id === collectionId) || collections?.[0]
+  // Only use current collection if collectionId is provided and found
+  // Don't fallback to first collection to avoid showing wrong share link
+  const currentCollection = collectionId 
+    ? collections?.find((c: any) => c.id === collectionId)
+    : collections?.[0]
 
   return (
     <div className="space-y-4 md:space-y-8">
