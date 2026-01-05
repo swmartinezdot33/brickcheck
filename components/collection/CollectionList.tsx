@@ -9,6 +9,17 @@ import { Trash2, Edit, Package, Eye } from 'lucide-react'
 import { CollectionItemWithSet } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface CollectionListProps {
   onEdit?: (item: CollectionItemWithSet) => void
@@ -19,6 +30,8 @@ interface CollectionListProps {
 export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: CollectionListProps) {
   const queryClient = useQueryClient()
   const [failedImages, setFailedImages] = React.useState<Set<string>>(new Set())
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [itemToDelete, setItemToDelete] = React.useState<string | null>(null)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['collection', collectionId],
@@ -48,8 +61,27 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] })
       queryClient.invalidateQueries({ queryKey: ['collection-stats'] })
+      toast.success('Item removed from collection')
+      setDeleteDialogOpen(false)
+      setItemToDelete(null)
+    },
+    onError: (error) => {
+      toast.error('Failed to remove item', {
+        description: error instanceof Error ? error.message : 'An error occurred'
+      })
     },
   })
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -209,11 +241,7 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to remove this item from your collection?')) {
-                      deleteMutation.mutate(item.id)
-                    }
-                  }}
+                  onClick={() => handleDeleteClick(item.id)}
                   title="Delete item"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -223,6 +251,26 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
           </CardContent>
         </Card>
       ))}
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove item from collection?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this item from your collection? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

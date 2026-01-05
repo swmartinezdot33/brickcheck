@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, User, Mail, Phone, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface Profile {
   id: string
@@ -55,12 +56,16 @@ export function ProfileForm() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file')
+        toast.error('Invalid file type', {
+          description: 'Please select an image file'
+        })
         return
       }
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB')
+        toast.error('File too large', {
+          description: 'Image size must be less than 5MB'
+        })
         return
       }
       setAvatarFile(file)

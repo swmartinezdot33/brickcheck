@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Upload, FileText, ExternalLink, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 interface ImportCollectionProps {
   collectionId?: string | null
@@ -113,7 +114,9 @@ export function ImportCollection({ collectionId }: ImportCollectionProps) {
     const file = e.target.files?.[0]
     if (file) {
       if (!file.name.endsWith('.csv')) {
-        alert('Please select a CSV file')
+        toast.error('Invalid file type', {
+          description: 'Please select a CSV file'
+        })
         return
       }
       setCsvFile(file)
