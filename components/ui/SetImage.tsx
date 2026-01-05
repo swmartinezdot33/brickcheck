@@ -1,19 +1,24 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 
 interface SetImageProps {
   src?: string | null
   alt: string
   className?: string
   containerClassName?: string
+  width?: number
+  height?: number
+  priority?: boolean
 }
 
 /**
- * Set image component with BrickCheck logo fallback
- * Displays the BrickCheck logo when image fails to load or is not available
+ * Set image component with BrickCheckLogo fallback
+ * Displays the BrickCheckLogo when image fails to load or is not available
+ * Uses Next.js Image for optimization
  */
-export function SetImage({ src, alt, className = 'w-full h-full object-cover', containerClassName }: SetImageProps) {
+export function SetImage({ src, alt, className = 'w-full h-full object-cover', containerClassName, width = 800, height = 800, priority = false }: SetImageProps) {
   const [imageError, setImageError] = React.useState(false)
   const [logoError, setLogoError] = React.useState(false)
 
@@ -28,6 +33,7 @@ export function SetImage({ src, alt, className = 'w-full h-full object-cover', c
             alt="BrickCheck Logo"
             className="w-12 h-12 object-contain opacity-50"
             onError={() => setLogoError(true)}
+            loading="lazy"
           />
         ) : (
           <div className="w-12 h-12 flex items-center justify-center text-2xl opacity-30">🧱</div>
@@ -37,13 +43,16 @@ export function SetImage({ src, alt, className = 'w-full h-full object-cover', c
   }
 
   return (
-    <img
+    <Image
       src={src}
       alt={alt}
+      width={width}
+      height={height}
       className={className}
       onError={() => setImageError(true)}
-      loading="lazy"
-      decoding="async"
+      priority={priority}
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      quality={85}
     />
   )
 }

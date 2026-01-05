@@ -99,12 +99,18 @@ export async function GET(
     // For MVP, let's just trigger a background refresh if data is older than 24h
     // or just fetch what we have for now to be fast.
     
+    // Get recent data points for chart (last 90 days)
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+    
+    // Fetch only recent snapshots for performance (last 90 days)
     const { data: snapshots, error: snapshotsError } = await supabase
       .from('price_snapshots')
       .select('*')
       .eq('set_id', realSetId)
+      .gte('timestamp', ninetyDaysAgo.toISOString())
       .order('timestamp', { ascending: false })
-      .limit(1000)
+      .limit(500)
 
     if (snapshotsError) {
       console.error('Error fetching snapshots:', snapshotsError)
@@ -199,18 +205,8 @@ export async function GET(
       ? calculateTrend(updatedSnapshots, 'USED', 30)
       : null
 
-    // Get recent data points for chart (last 90 days)
-    const ninetyDaysAgo = new Date()
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-
-    const recentSnapshots = updatedSnapshots
-      ? updatedSnapshots.filter(
-          (s) => new Date(s.timestamp) >= ninetyDaysAgo
-        )
-      : []
-
-    // Group by date for chart
-    const chartData = recentSnapshots.reduce((acc, snapshot) => {
+    // Group by date for chart - use updatedSnapshots which already has the 90-day filter applied
+    const chartData = updatedSnapshots.reduce((acc, snapshot) => {
       const date = new Date(snapshot.timestamp).toISOString().split('T')[0]
       if (!acc[date]) {
         acc[date] = { date, sealed: [], used: [] }
@@ -227,7 +223,7 @@ export async function GET(
       }))
       .sort((a, b) => a.date.localeCompare(b.date))
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       set,
       pricing: {
         sealed: sealedEstimate,
@@ -246,6 +242,11 @@ export async function GET(
         recentSnapshots: updatedSnapshots ? updatedSnapshots.slice(0, 50) : [], 
       },
     })
+
+    // Cache for 5 minutes (300 seconds) on CDN, revalidate more frequently if needed
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    
+    return response
   } catch (error) {
     console.error('Error fetching set details:', error)
     return NextResponse.json(

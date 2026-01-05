@@ -1,16 +1,18 @@
 'use client'
 
-import { use } from 'react'
+import { use, lazy, Suspense, memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { PriceChart } from '@/components/pricing/PriceChart'
-import { RecentSales } from '@/components/pricing/RecentSales'
-import { PriceForecastCard } from '@/components/pricing/PriceForecastCard'
 import { formatCurrency } from '@/lib/utils'
 import { Loader2, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { SetImage } from '@/components/ui/SetImage'
+
+// Lazy load heavy components
+const PriceChart = lazy(() => import('@/components/pricing/PriceChart').then(mod => ({ default: memo(mod.PriceChart) })))
+const RecentSales = lazy(() => import('@/components/pricing/RecentSales').then(mod => ({ default: memo(mod.RecentSales) })))
+const PriceForecastCard = lazy(() => import('@/components/pricing/PriceForecastCard').then(mod => ({ default: memo(mod.PriceForecastCard) })))
 
 export default function SetDetailPage({
   params,
@@ -182,15 +184,21 @@ export default function SetDetailPage({
           )}
 
           {/* Forecast */}
-          <PriceForecastCard setId={set.id} condition={condition} />
+          <Suspense fallback={<Card className="h-64"><CardContent className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent></Card>}>
+            <PriceForecastCard setId={set.id} condition={condition} />
+          </Suspense>
         </div>
 
         {/* Price Chart */}
-        <PriceChart data={pricing.chartData} condition={condition} />
+        <Suspense fallback={<Card className="h-96"><CardContent className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent></Card>}>
+          <PriceChart data={pricing.chartData} condition={condition} />
+        </Suspense>
 
         {/* Recent Sales */}
         {pricing.recentSnapshots && pricing.recentSnapshots.length > 0 && (
-          <RecentSales snapshots={pricing.recentSnapshots} condition={condition} />
+          <Suspense fallback={<Card className="h-64"><CardContent className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent></Card>}>
+            <RecentSales snapshots={pricing.recentSnapshots} condition={condition} />
+          </Suspense>
         )}
       </div>
     )

@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { PriceSnapshot } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,7 +21,7 @@ interface RecentSalesProps {
   condition: 'SEALED' | 'USED'
 }
 
-export function RecentSales({ snapshots, condition }: RecentSalesProps) {
+function RecentSalesComponent({ snapshots, condition }: RecentSalesProps) {
   // Filter by condition and sort by most recent
   const filteredSnapshots = snapshots
     .filter((s) => s.condition === condition)
@@ -181,3 +182,5 @@ export function RecentSales({ snapshots, condition }: RecentSalesProps) {
     </Card>
   )
 }
+
+export const RecentSales = memo(RecentSalesComponent)

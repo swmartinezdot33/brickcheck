@@ -51,16 +51,16 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="w-full aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
                 </div>
               </div>
             </CardContent>
@@ -112,86 +112,98 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {filteredData.map((item) => (
-        <Card key={item.id}>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              {/* Thumbnail Image - Clickable */}
-              {item.sets?.id && (
-                <Link href={`/set/${item.sets.id}`} className="flex-shrink-0 hover:opacity-75 transition-opacity">
+        <Card key={item.id} className="group hover:shadow-lg transition-shadow">
+          <CardContent className="p-4 flex flex-col h-full">
+            {/* Image - Clickable Square */}
+            {item.sets?.id && (
+              <Link href={`/set/${item.sets.id}`} className="mb-4">
+                <div className="relative aspect-square bg-muted rounded-lg overflow-hidden border border-primary/10 group-hover:border-primary/30 transition-colors">
                   {item.sets?.image_url ? (
                     <img
                       src={item.sets.image_url}
                       alt={item.sets.name || 'Set image'}
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-primary/10 cursor-pointer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       onError={(e) => {
-                        // Hide image if it fails to load
                         e.currentTarget.style.display = 'none'
                       }}
                     />
                   ) : (
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-muted flex items-center justify-center border-2 border-primary/10 cursor-pointer">
-                      <Package className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-12 w-12 text-muted-foreground" />
                     </div>
                   )}
-                </Link>
-              )}
+                </div>
+              </Link>
+            )}
+            
+            {/* Content */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <h3 className="font-semibold text-sm line-clamp-2 mb-2">
+                {item.sets?.name || 'Unknown Set'}
+              </h3>
               
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <h3 className="font-semibold text-lg">
-                    {item.sets?.name || 'Unknown Set'}
-                  </h3>
-                  {item.sets?.retired && (
-                    <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
-                      ⭐ Retired
-                    </Badge>
-                  )}
-                  <Badge variant={item.condition === 'SEALED' ? 'default' : 'secondary'}>
-                    {item.condition}
+              {/* Badges */}
+              <div className="flex gap-1 flex-wrap mb-3">
+                {item.sets?.retired && (
+                  <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white text-xs">
+                    Retired
                   </Badge>
-                  {item.condition_grade && (
-                    <Badge variant="outline">{item.condition_grade}</Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Set #{item.sets?.set_number} • {item.sets?.theme || 'Unknown Theme'} •{' '}
-                  {item.sets?.year || 'Unknown Year'}
-                </p>
-                <div className="flex items-center gap-4 text-sm">
-                  <span>Quantity: {item.quantity}</span>
-                  {item.acquisition_cost_cents && (
-                    <span>
-                      Cost: {formatCurrency(item.acquisition_cost_cents * item.quantity)}
-                    </span>
-                  )}
-                  {item.acquisition_date && (
-                    <span>Acquired: {new Date(item.acquisition_date).toLocaleDateString()}</span>
-                  )}
-                </div>
-                {item.notes && (
-                  <p className="text-sm text-muted-foreground mt-2">{item.notes}</p>
+                )}
+                <Badge variant={item.condition === 'SEALED' ? 'default' : 'secondary'} className="text-xs">
+                  {item.condition}
+                </Badge>
+                {item.condition_grade && (
+                  <Badge variant="outline" className="text-xs">{item.condition_grade}</Badge>
                 )}
               </div>
-              <div className="flex gap-1">
-                {/* View Details Button */}
+              
+              {/* Set Info */}
+              <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                #{item.sets?.set_number} • {item.sets?.theme}
+              </p>
+              
+              {/* Quantity & Cost */}
+              <div className="text-xs text-muted-foreground space-y-1 mb-4">
+                <div>Qty: {item.quantity}</div>
+                {item.acquisition_cost_cents && (
+                  <div className="font-semibold text-foreground">
+                    {formatCurrency(item.acquisition_cost_cents * item.quantity)}
+                  </div>
+                )}
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-1 mt-auto">
                 {item.sets?.id && (
-                  <Button variant="ghost" size="sm" asChild title="View set details">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    asChild 
+                    className="flex-1"
+                    title="View set details"
+                  >
                     <Link href={`/set/${item.sets.id}`}>
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      <span className="text-xs">View</span>
                     </Link>
                   </Button>
                 )}
                 
-                {/* Edit Button */}
                 {onEdit && (
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(item)} title="Edit item">
-                    <Edit className="h-4 w-4" />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => onEdit(item)}
+                    className="flex-1"
+                    title="Edit item"
+                  >
+                    <Edit className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Edit</span>
                   </Button>
                 )}
                 
-                {/* Delete Button */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -202,7 +214,7 @@ export function CollectionList({ onEdit, retiredFilter = 'all', collectionId }: 
                   }}
                   title="Delete item"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>

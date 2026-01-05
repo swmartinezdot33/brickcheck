@@ -46,7 +46,25 @@ export async function POST(
       return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 })
     }
 
-    // Verify the collection belongs to the user
+    // First verify the collection exists and belongs to the user (without share fields)
+    const { data: collectionCheck, error: checkError } = await supabase
+      .from('collections')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (checkError || !collectionCheck) {
+      console.error('[Share Route] Error verifying collection ownership:', checkError)
+      return NextResponse.json({ 
+        error: 'Collection not found or access denied',
+        details: checkError?.message 
+      }, { status: 404 })
+    }
+
+    console.log('[Share Route] Collection ownership verified:', collectionCheck.id)
+
+    // Now fetch with share fields (may fail if migration not run)
     const { data: collection, error: fetchError } = await supabase
       .from('collections')
       .select('id, share_token, is_public')
@@ -54,9 +72,31 @@ export async function POST(
       .eq('user_id', user.id)
       .single()
 
-    if (fetchError || !collection) {
+    if (fetchError) {
+      console.error('[Share Route] Error fetching collection with share fields:', fetchError)
+      console.error('[Share Route] Error code:', fetchError.code)
+      console.error('[Share Route] Error message:', fetchError.message)
+      
+      // Check if it's a column not found error (migration not run)
+      if (fetchError.code === '42703' || fetchError.message?.includes('column') || fetchError.message?.includes('does not exist')) {
+        return NextResponse.json({ 
+          error: 'Database migration not applied',
+          details: 'Please run migration 005_collection_sharing.sql. Error: ' + fetchError.message 
+        }, { status: 500 })
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to fetch collection',
+        details: fetchError.message 
+      }, { status: 500 })
+    }
+
+    if (!collection) {
+      console.log('[Share Route] Collection not found - no data returned')
       return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
     }
+
+    console.log('[Share Route] Collection found:', collection.id)
 
     // Generate a new token if one doesn't exist, otherwise reuse existing
     let shareToken = collection.share_token

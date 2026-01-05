@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import {
   LineChart,
   Line,
@@ -25,7 +26,7 @@ interface PriceChartProps {
   condition?: 'SEALED' | 'USED'
 }
 
-export function PriceChart({ data, condition }: PriceChartProps) {
+function PriceChartComponent({ data, condition }: PriceChartProps) {
   if (!data || data.length === 0) {
     return (
       <Card>
@@ -106,3 +107,5 @@ export function PriceChart({ data, condition }: PriceChartProps) {
     </Card>
   )
 }
+
+export const PriceChart = memo(PriceChartComponent)
