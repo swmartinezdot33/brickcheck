@@ -116,35 +116,3 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-title': 'BrickCheck',
   },
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {/* Google Analytics */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-CQSY8FB6NG"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-CQSY8FB6NG');
-          `}
-        </Script>
-        <FacebookMeta />
-        <QueryProvider>
-          {children}
-        </QueryProvider>
-      </body>
-    </html>
-  );
-}
