@@ -24,6 +24,14 @@ export async function GET(
       return NextResponse.json({ error: 'Collection not found or not shared' }, { status: 404 })
     }
 
+    // Fetch the user's display name from their profile
+    // This requires an RLS policy that allows public access for users with public collections
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('display_name')
+      .eq('user_id', collection.user_id)
+      .single()
+
     // Fetch collection items with set data
     // Filter out sensitive fields: acquisition_cost_cents, acquisition_date, notes
     const { data: items, error: itemsError } = await supabase
@@ -67,6 +75,7 @@ export async function GET(
         description: collection.description,
         created_at: collection.created_at,
         updated_at: collection.updated_at,
+        owner_display_name: userProfile?.display_name || null,
       },
       items: items || [],
       itemCount: items?.length || 0,

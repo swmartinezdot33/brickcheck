@@ -37,6 +37,7 @@ interface SharedCollection {
     description: string | null
     created_at: string
     updated_at: string
+    owner_display_name: string | null
   }
   items: SharedCollectionItem[]
   itemCount: number
@@ -115,6 +116,12 @@ function ShareCollectionContent({ token }: { token: string }) {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{data.itemCount} {data.itemCount === 1 ? 'set' : 'sets'}</span>
             <span>•</span>
+            {data.collection.owner_display_name ? (
+              <>
+                <span>Collection by {data.collection.owner_display_name}</span>
+                <span>•</span>
+              </>
+            ) : null}
             <span>Shared collection</span>
           </div>
         </div>
