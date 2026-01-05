@@ -18,6 +18,10 @@ export async function POST(
 
     const { id } = await params
 
+    if (!id) {
+      return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 })
+    }
+
     // Verify the collection belongs to the user
     const { data: collection, error: fetchError } = await supabase
       .from('collections')
