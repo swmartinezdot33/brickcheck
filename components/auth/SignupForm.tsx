@@ -34,11 +34,13 @@ export function SignupForm() {
 
     setLoading(true)
 
+    // Use canonical domain for email redirect in production, fallback to current origin for dev
+    const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${redirectUrl}/dashboard`,
       },
     })
 

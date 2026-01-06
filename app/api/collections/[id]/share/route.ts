@@ -128,8 +128,8 @@ export async function POST(
     }
 
     // Generate the full shareable URL
-    const url = new URL(request.url)
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || url.origin
+    // Always use canonical domain for share URLs
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.brickcheck.app'
     const shareUrl = `${baseUrl}/share/${shareToken}`
 
     return NextResponse.json({

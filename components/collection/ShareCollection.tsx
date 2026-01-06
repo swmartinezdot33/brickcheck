@@ -32,7 +32,7 @@ export function ShareCollection({
   const [isPublic, setIsPublic] = useState(initialIsPublic)
   // Build shareUrl from current props, recalculate when props change
   const shareUrl = initialShareToken 
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${initialShareToken}` 
+    ? `https://www.brickcheck.app/share/${initialShareToken}` 
     : null
   const [displayShareUrl, setDisplayShareUrl] = useState<string | null>(shareUrl)
   const [loading, setLoading] = useState(false)
@@ -44,7 +44,7 @@ export function ShareCollection({
   // Update display URL when props change
   useEffect(() => {
     const newUrl = initialShareToken 
-      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${initialShareToken}` 
+      ? `https://www.brickcheck.app/share/${initialShareToken}` 
       : null
     setDisplayShareUrl(newUrl)
     setIsPublic(initialIsPublic)
