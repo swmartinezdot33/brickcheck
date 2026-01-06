@@ -13,6 +13,13 @@ Disallow: /login
 Disallow: /signup
 Disallow: /account/
 
+# Disallow Vercel preview/deployment paths and internal routes
+Disallow: /defaultsite
+Disallow: /_next/
+Disallow: /_vercel/
+Disallow: /.next/
+# Note: /share/ pages have noindex in metadata, so we don't need to disallow them here
+
 # Allow important pages
 Allow: /
 Allow: /privacy
