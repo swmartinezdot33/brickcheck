@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
     if (setIds.length === 0) {
       return NextResponse.json({
         totalSets: items.reduce((sum, item) => sum + item.quantity, 0),
-        sealedCount: items.filter((item) => item.condition === 'SEALED').length,
-        usedCount: items.filter((item) => item.condition === 'USED').length,
+        sealedCount: items.reduce((sum, item) => item.condition === 'SEALED' ? sum + item.quantity : sum, 0),
+        usedCount: items.reduce((sum, item) => item.condition === 'USED' ? sum + item.quantity : sum, 0),
         retiredCount: items.filter((item) => {
           const sets = item.sets as any
           return sets?.retired === true
@@ -362,8 +362,12 @@ export async function GET(request: NextRequest) {
 
     // Calculate aggregate stats
     const totalSets = items?.reduce((sum, item) => sum + item.quantity, 0) || 0
-    const sealedCount = items?.filter((item) => item.condition === 'SEALED').length || 0
-    const usedCount = items?.filter((item) => item.condition === 'USED').length || 0
+    const sealedCount = items?.reduce((sum, item) => {
+      return item.condition === 'SEALED' ? sum + item.quantity : sum
+    }, 0) || 0
+    const usedCount = items?.reduce((sum, item) => {
+      return item.condition === 'USED' ? sum + item.quantity : sum
+    }, 0) || 0
     const retiredCount = items?.filter((item) => {
       const sets = item.sets as any
       return sets?.retired === true

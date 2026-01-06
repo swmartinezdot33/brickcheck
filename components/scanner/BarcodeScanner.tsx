@@ -391,9 +391,15 @@ export function BarcodeScanner({
       setIsScanning(true)
       setDetectedCodes(new Map())
 
-      // Check HTTPS
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        throw new Error('Camera access requires HTTPS. Please use the production URL.')
+      // Check HTTPS (allow localhost and 127.0.0.1 for development)
+      const isLocalDev = 
+        window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '0.0.0.0' ||
+        window.location.hostname.endsWith('.local')
+      
+      if (window.location.protocol !== 'https:' && !isLocalDev) {
+        throw new Error('Camera access requires HTTPS. Please use the production URL or localhost for development.')
       }
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
