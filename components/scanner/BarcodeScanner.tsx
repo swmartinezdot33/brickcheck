@@ -520,7 +520,7 @@ export function BarcodeScanner({
     <Card className={isFullScreen ? 'border-0 shadow-none h-full flex flex-col' : ''}>
       {!isFullScreen && (
         <CardHeader>
-          <CardTitle>AR Set Scanner</CardTitle>
+          <CardTitle>Scanner</CardTitle>
           <CardDescription>
             Point your camera at QR codes on LEGO boxes to instantly see set details.
             {detectionMethod !== 'stopped' && detectionMethod !== 'initializing' && (
