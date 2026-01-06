@@ -615,12 +615,40 @@ export function BarcodeScanner({
                 </div>
               )}
               {codesArray.map((code) => {
+                // Only render if container size is valid
+                if (containerSize.width === 0 || containerSize.height === 0) {
+                  return null
+                }
+
                 const displayX = code.x * containerSize.width
                 const displayY = code.y * containerSize.height
 
-                console.log(`[Scanner] Rendering code ${code.id} at (${displayX}, ${displayY})`)
+                // Show loading state while setInfo is being fetched (setInfo is undefined)
+                if (code.setInfo === undefined) {
+                  return (
+                    <div
+                      key={code.id}
+                      className="absolute z-40 pointer-events-auto"
+                      style={{
+                        left: Math.max(10, Math.min(displayX - 60, containerSize.width - 130)),
+                        top: Math.max(10, Math.min(displayY - 40, containerSize.height - 100)),
+                        width: 120,
+                      }}
+                    >
+                      <div className="bg-blue-500/95 backdrop-blur-sm rounded-lg px-3 py-2 border-2 border-blue-400 shadow-xl">
+                        <p className="text-xs font-semibold text-white text-center">
+                          Looking up...
+                        </p>
+                        <p className="text-[10px] text-blue-100 text-center mt-1 truncate">
+                          {code.code.substring(0, 30)}...
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
 
-                if (!code.setInfo) {
+                // Show "not found" if setInfo is explicitly null
+                if (code.setInfo === null) {
                   return (
                     <div
                       key={code.id}
@@ -646,6 +674,7 @@ export function BarcodeScanner({
                   )
                 }
 
+                // Show QRPopup when setInfo is available
                 return (
                   <QRPopup
                     key={code.id}
