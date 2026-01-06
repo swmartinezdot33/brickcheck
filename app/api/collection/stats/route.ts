@@ -133,7 +133,9 @@ export async function GET(request: NextRequest) {
 
     const snapshots = (snapshotsData || []) as PriceSnapshot[]
 
+    console.log(`[Stats] User: ${user.id}, Collection ID: ${collectionId || 'all'}`)
     console.log(`[Stats] Found ${items?.length || 0} items, ${snapshots.length} price snapshots`)
+    console.log(`[Stats] Set IDs: ${setIds.slice(0, 5).join(', ')}${setIds.length > 5 ? '...' : ''} (${setIds.length} total)`)
     
     // Count items with/without price data for debugging
     let itemsWithSnapshots = 0
@@ -164,7 +166,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Helper to get price X days ago (approximate)
-    const getHistoricalPrice = (setId: string, condition: string, daysAgo: number): number | null => {
+    // Falls back to latest price or MSRP if no historical snapshot exists
+    const getHistoricalPrice = (setId: string, condition: string, daysAgo: number, msrpCents?: number | null): number | null => {
       const targetDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
       
       // Filter snapshots for this set and condition
@@ -172,7 +175,10 @@ export async function GET(request: NextRequest) {
         (s) => s.set_id === setId && s.condition === condition
       )
       
-      if (relevantSnapshots.length === 0) return null
+      if (relevantSnapshots.length === 0) {
+        // No snapshots at all - fall back to latest price (which may use MSRP)
+        return getLatestPrice(setId, condition, msrpCents)
+      }
       
       // Find snapshot closest to target date (on or before)
       // Snapshots are ordered desc, so we look for the first one that is <= targetDate
@@ -181,12 +187,20 @@ export async function GET(request: NextRequest) {
       )
       
       // If no snapshot on/before target date, use the oldest one we have
-      return match ? match.price_cents : relevantSnapshots[relevantSnapshots.length - 1]?.price_cents || null
+      const historicalPrice = match ? match.price_cents : relevantSnapshots[relevantSnapshots.length - 1]?.price_cents || null
+      
+      // If we found a historical price, return it
+      if (historicalPrice) {
+        return historicalPrice
+      }
+      
+      // Otherwise, fall back to latest price (which may use MSRP)
+      return getLatestPrice(setId, condition, msrpCents)
     }
 
     // Helper to get price 1 day ago for today's change
-    const getYesterdayPrice = (setId: string, condition: string): number | null => {
-      return getHistoricalPrice(setId, condition, 1)
+    const getYesterdayPrice = (setId: string, condition: string, msrpCents?: number | null): number | null => {
+      return getHistoricalPrice(setId, condition, 1, msrpCents)
     }
 
     let totalEstimatedValue = 0
@@ -231,14 +245,22 @@ export async function GET(request: NextRequest) {
       else itemsWithNoPrice++
       
       const latestPrice = getLatestPrice(set.id, item.condition, set.msrp_cents)
-      const historicalPrice = getHistoricalPrice(set.id, item.condition, 30) || latestPrice // Fallback to current if no history
-      const yesterdayPrice = getYesterdayPrice(set.id, item.condition) || latestPrice // Fallback to current if no history
+      const historicalPrice = getHistoricalPrice(set.id, item.condition, 30, set.msrp_cents)
+      const yesterdayPrice = getYesterdayPrice(set.id, item.condition, set.msrp_cents)
       
-      console.log(`[Stats] Set ${set.set_number} (${item.condition}): price=${latestPrice}, msrp=${set.msrp_cents}, hasSnapshot=${hasSnapshot}`)
+      // Log detailed price information for debugging
+      if (items.length <= 10) { // Only log for small collections to avoid spam
+        console.log(`[Stats] Set ${set.set_number} (${item.condition}): latest=${latestPrice}, 30d=${historicalPrice}, yesterday=${yesterdayPrice}, msrp=${set.msrp_cents}, hasSnapshot=${hasSnapshot}, qty=${item.quantity}`)
+      }
       
       const itemValue = (latestPrice || 0) * item.quantity
       const itemValue30DaysAgo = (historicalPrice || 0) * item.quantity
       const itemValueYesterday = (yesterdayPrice || 0) * item.quantity
+      
+      // Log if we're getting zero values unexpectedly
+      if (itemValue === 0 && (set.msrp_cents || hasSnapshot)) {
+        console.warn(`[Stats] WARNING: Item ${set.set_number} has zero value but has price data. latestPrice=${latestPrice}, msrp=${set.msrp_cents}, hasSnapshot=${hasSnapshot}`)
+      }
 
       totalEstimatedValue += itemValue
       totalEstimatedValue30DaysAgo += itemValue30DaysAgo
@@ -301,9 +323,10 @@ export async function GET(request: NextRequest) {
     })
 
     console.log(`[Stats] Price data: ${itemsWithSnapshots} with snapshots, ${itemsUsingMSRP} using MSRP, ${itemsWithNoPrice} with no price`)
-    console.log(`[Stats] Total estimated value: ${totalEstimatedValue}`)
+    console.log(`[Stats] Total estimated value: ${totalEstimatedValue}, 30d ago: ${totalEstimatedValue30DaysAgo}, yesterday: ${totalEstimatedValueYesterday}`)
     console.log(`[Stats] Distribution themes: ${Object.keys(distributionByTheme).length}, years: ${Object.keys(distributionByYear).length}`)
     console.log(`[Stats] Movers: ${moversData.length} items with price changes`)
+    console.log(`[Stats] Total cost basis: ${totalCostBasis}, Total gain: ${totalEstimatedValue - totalCostBasis}`)
 
     // Get biggest movers - top 5 gainers and top 5 losers
     const sortedByChange = [...moversData].sort((a, b) => b.change - a.change)
