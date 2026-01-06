@@ -326,7 +326,6 @@ export async function GET(request: NextRequest) {
     console.log(`[Stats] Total estimated value: ${totalEstimatedValue}, 30d ago: ${totalEstimatedValue30DaysAgo}, yesterday: ${totalEstimatedValueYesterday}`)
     console.log(`[Stats] Distribution themes: ${Object.keys(distributionByTheme).length}, years: ${Object.keys(distributionByYear).length}`)
     console.log(`[Stats] Movers: ${moversData.length} items with price changes`)
-    console.log(`[Stats] Total cost basis: ${totalCostBasis}, Total gain: ${totalEstimatedValue - totalCostBasis}`)
 
     // Get biggest movers - top 5 gainers and top 5 losers
     const sortedByChange = [...moversData].sort((a, b) => b.change - a.change)
@@ -377,6 +376,8 @@ export async function GET(request: NextRequest) {
         }
         return sum
       }, 0) || 0
+
+    console.log(`[Stats] Total cost basis: ${totalCostBasis}, Total gain: ${totalEstimatedValue - totalCostBasis}`)
 
     // Calculate today's change (compared to yesterday)
     const todayChange = totalEstimatedValue - totalEstimatedValueYesterday
