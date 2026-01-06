@@ -80,7 +80,7 @@ export function BarcodeScanner({
     return () => window.removeEventListener('resize', updateSize)
   }, [])
 
-  // Prune stale codes
+  // Prune stale codes (but keep codes that are being looked up or have setInfo)
   useEffect(() => {
     if (isScanning) {
       pruningIntervalRef.current = setInterval(() => {
@@ -89,14 +89,18 @@ export function BarcodeScanner({
           const updated = new Map(prev)
           let changed = false
           for (const [id, code] of updated.entries()) {
-            if (now - code.timestamp > 500) {
+            // Keep codes longer if they have setInfo or are recent (still being looked up)
+            const age = now - code.timestamp
+            // Keep codes with setInfo for 5 seconds, others for 2 seconds
+            const maxAge = code.setInfo !== undefined ? 5000 : 2000
+            if (age > maxAge) {
               updated.delete(id)
               changed = true
             }
           }
           return changed ? updated : prev
         })
-      }, 200)
+      }, 500) // Check every 500ms
     } else {
       if (pruningIntervalRef.current) {
         clearInterval(pruningIntervalRef.current)
@@ -121,10 +125,12 @@ export function BarcodeScanner({
   // Lookup set information
   const lookupSetInfo = async (code: string, format: BarcodeFormat): Promise<DetectedCode['setInfo'] | null> => {
     try {
+      console.log(`[Scanner] 🔍 Looking up set info for code: ${code.substring(0, 50)}`)
       const res = await fetch(`/api/scanLookup?code=${encodeURIComponent(code)}`)
       if (res.ok) {
         const data = await res.json()
         if (data.set) {
+          console.log(`[Scanner] ✅ Set lookup successful: ${data.set.name} (#${data.set.set_number})`)
           return {
             name: data.set.name,
             imageUrl: data.set.image_url,
@@ -133,11 +139,16 @@ export function BarcodeScanner({
             theme: data.set.theme,
             year: data.set.year,
           }
+        } else {
+          console.log(`[Scanner] ⚠️ Set lookup returned no set data`)
         }
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        console.warn(`[Scanner] ⚠️ Set lookup failed: ${res.status} - ${errorData.error || 'Unknown error'}`)
       }
       return null
     } catch (error) {
-      console.debug('Set lookup error:', error)
+      console.error('[Scanner] ❌ Set lookup error:', error)
       return null
     }
   }
@@ -180,14 +191,30 @@ export function BarcodeScanner({
       const updated = new Map(prev)
       const existingCode = updated.get(codeId)
 
+      // Add code immediately (setInfo will be undefined initially, then set to null or the actual info)
+      updated.set(codeId, {
+        id: codeId,
+        code: cleanCode,
+        format,
+        x: centerX,
+        y: centerY,
+        width: Math.max(width, 0.1),
+        height: Math.max(height, 0.05),
+        timestamp: now,
+        setInfo: existingCode?.setInfo, // Preserve existing setInfo if available
+      })
+
       // Only lookup if we don't have info yet
-      if (!existingCode || !existingCode.setInfo) {
+      if (!existingCode || existingCode.setInfo === undefined) {
+        // Start lookup (setInfo is undefined while loading)
         lookupSetInfo(cleanCode, format).then((setInfo) => {
           setDetectedCodes((prev) => {
             const updated = new Map(prev)
             const code = updated.get(codeId)
             if (code) {
+              // Update with setInfo (null if not found, or the actual info if found)
               updated.set(codeId, { ...code, setInfo: setInfo || null })
+              console.log(`[Scanner] ✅ Updated code ${codeId} with setInfo: ${setInfo ? setInfo.name : 'null'}`)
             }
             return updated
           })
@@ -195,7 +222,7 @@ export function BarcodeScanner({
             console.log(`[Scanner] ✅ Set found: ${setInfo.name} (#${setInfo.setNumber})`)
           }
         }).catch((err) => {
-          console.error('Set lookup failed:', err)
+          console.error('[Scanner] ❌ Set lookup failed:', err)
           setDetectedCodes((prev) => {
             const updated = new Map(prev)
             const code = updated.get(codeId)
@@ -206,18 +233,6 @@ export function BarcodeScanner({
           })
         })
       }
-
-      updated.set(codeId, {
-        id: codeId,
-        code: cleanCode,
-        format,
-        x: centerX,
-        y: centerY,
-        width: Math.max(width, 0.1),
-        height: Math.max(height, 0.05),
-        timestamp: now,
-        setInfo: existingCode?.setInfo,
-      })
 
       // Call onScan callback immediately
       if (onScan) {
