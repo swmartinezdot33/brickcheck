@@ -14,15 +14,16 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   UNIQUE(user_id, platform)
 );
 
--- Add updated_at trigger for subscriptions
+-- Add updated_at trigger for subscriptions (only if it doesn't exist)
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
 CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON subscriptions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Enable RLS on subscriptions
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Policies for subscriptions
+-- Policies for subscriptions (drop existing if present)
+DROP POLICY IF EXISTS "Users can view their own subscriptions" ON subscriptions;
 CREATE POLICY "Users can view their own subscriptions" 
   ON subscriptions FOR SELECT 
   USING (auth.uid() = user_id);
-

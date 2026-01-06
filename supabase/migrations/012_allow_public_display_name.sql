@@ -1,6 +1,7 @@
 -- Allow public access to display_name for users who have public collections
 -- This enables displaying the collection owner's name on shared collection pages
 
+DROP POLICY IF EXISTS "Public can view display_name for users with public collections" ON user_profiles;
 CREATE POLICY "Public can view display_name for users with public collections" 
   ON user_profiles FOR SELECT 
   USING (
@@ -10,4 +11,3 @@ CREATE POLICY "Public can view display_name for users with public collections"
       AND collections.is_public = true
     )
   );
-
