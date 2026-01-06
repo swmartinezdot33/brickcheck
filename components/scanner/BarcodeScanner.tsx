@@ -322,15 +322,25 @@ export function BarcodeScanner({
       codeReaderRef.current = codeReader
 
       setDetectionMethod('ZXing Library (QR Code Optimized)')
-      console.log('[Scanner] 📚 Using ZXing library optimized for QR codes')
+      console.log('[Scanner] 📚 Using ZXing library with existing video element')
 
       const video = videoRef.current
       if (!video) throw new Error('Video element not found')
 
-      console.log('[Scanner] Starting ZXing decodeFromVideoDevice...')
+      // Wait for video to be ready
+      await new Promise((resolve) => {
+        if (video.readyState >= 2) {
+          resolve(undefined)
+        } else {
+          video.onloadedmetadata = () => resolve(undefined)
+        }
+      })
 
-      codeReader.decodeFromVideoDevice(
-        deviceId,
+      console.log('[Scanner] Video ready, starting ZXing decodeFromVideoElementContinuously...')
+      console.log(`[Scanner] Video dimensions: ${video.videoWidth}x${video.videoHeight}`)
+
+      // Use decodeFromVideoElementContinuously which works with existing video element
+      codeReader.decodeFromVideoElementContinuously(
         video,
         (result, err) => {
           if (err) {
@@ -345,7 +355,7 @@ export function BarcodeScanner({
             const format = result.getBarcodeFormat()
             const code = result.getText().trim()
 
-            console.log(`[Scanner] 🎯 ZXing raw result - format: ${format}, code: ${code.substring(0, 100)}`)
+            console.log(`[Scanner] 🎯 ZXing detected - format: ${format}, code: ${code.substring(0, 100)}`)
 
             if (format === BarcodeFormat.QR_CODE && code) {
               console.log(`[Scanner] ✅ ZXing detected QR code: ${code.substring(0, 50)}`)
@@ -368,16 +378,12 @@ export function BarcodeScanner({
 
               // Process immediately
               processDetectedCode(code, boundingBox, format)
-            } else {
-              console.warn(`[Scanner] ⚠️ Unexpected format or empty code: format=${format}, code=${code}`)
             }
-          } else {
-            console.warn('[Scanner] ⚠️ ZXing returned result but it was null/undefined')
           }
         }
       )
       
-      console.log('[Scanner] ✅ ZXing decodeFromVideoDevice started')
+      console.log('[Scanner] ✅ ZXing decodeFromVideoElementContinuously started')
     } catch (err) {
       console.error('[Scanner] ❌ ZXing failed:', err)
       throw err
@@ -459,26 +465,38 @@ export function BarcodeScanner({
 
       await videoRef.current.play()
 
+      // Wait a moment for video to stabilize before starting detection
+      await new Promise(resolve => setTimeout(resolve, 300))
+
       // Try detection methods in order of preference
       try {
         // Method 1: Native BarcodeDetector (fastest, most modern)
         await startBarcodeDetector(stream)
+        console.log('[Scanner] ✅ Using Native BarcodeDetector API')
       } catch (err1) {
         console.log('[Scanner] BarcodeDetector failed, trying ZXing...', err1)
         try {
-          // Method 2: ZXing (most reliable, works with our video element)
+          // Method 2: ZXing (most reliable, works with our existing video element)
+          // Get device info for logging
           const codeReader = new BrowserQRCodeReader()
-          const devices = await codeReader.listVideoInputDevices()
-          console.log('[Scanner] ZXing available devices:', devices)
+          let deviceId = 'default'
+          try {
+            const devices = await codeReader.listVideoInputDevices()
+            console.log(`[Scanner] ZXing found ${devices.length} video devices`)
+            
+            // Try to find the same device we're using
+            const videoTracks = stream.getVideoTracks()
+            const currentDeviceId = videoTracks[0]?.getSettings().deviceId
+            const matchingDevice = devices.find(d => d.deviceId === currentDeviceId)
+            deviceId = matchingDevice?.deviceId || devices[0]?.deviceId || 'default'
+            
+            console.log(`[Scanner] Using ZXing with device: ${deviceId}`)
+          } catch (e) {
+            console.log('[Scanner] Could not list devices, using default')
+          }
           
-          // Try to find the same device we're using, or use the first one
-          const videoTracks = stream.getVideoTracks()
-          const currentDeviceId = videoTracks[0]?.getSettings().deviceId
-          const matchingDevice = devices.find(d => d.deviceId === currentDeviceId)
-          const deviceId = matchingDevice?.deviceId || devices[0]?.deviceId || 'default'
-          
-          console.log(`[Scanner] Using ZXing device: ${deviceId} (current stream device: ${currentDeviceId})`)
           await startZXing(stream, deviceId)
+          console.log('[Scanner] ✅ Using ZXing Library')
         } catch (err2) {
           console.error('[Scanner] All detection methods failed:', err2)
           throw err2
