@@ -21,6 +21,7 @@ interface DetectedCode {
     name: string
     imageUrl: string | null
     setNumber: string
+    setId?: string
     theme?: string
     year?: number
   } | null
@@ -128,6 +129,7 @@ export function BarcodeScanner({
             name: data.set.name,
             imageUrl: data.set.image_url,
             setNumber: data.set.set_number,
+            setId: data.set.id,
             theme: data.set.theme,
             year: data.set.year,
           }
@@ -617,10 +619,13 @@ export function BarcodeScanner({
                     containerHeight={containerSize.height}
                     onOpen={() => {
                       if (code.setInfo) {
-                        router.push(`/browse/${code.setInfo.setNumber}`)
+                        // Prefer setId if available, otherwise use setNumber (which the API route accepts)
+                        const setIdentifier = code.setInfo.setId || code.setInfo.setNumber
+                        router.push(`/browse/${setIdentifier}`)
                       }
                     }}
                     onAdd={() => {
+                      // When Add is clicked, trigger the onScan callback which should open AddItemModal
                       onScan(code.code)
                     }}
                   />

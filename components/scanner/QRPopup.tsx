@@ -9,6 +9,7 @@ interface SetInfo {
   name: string
   imageUrl: string | null
   setNumber: string
+  setId?: string
   theme?: string
   year?: number
 }
