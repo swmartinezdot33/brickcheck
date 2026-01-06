@@ -387,20 +387,39 @@ export function BarcodeScanner({
       let stream: MediaStream
       
       if (isMobile) {
-        // On mobile, explicitly list devices and select rear camera
+        // On mobile, prioritize rear camera
+        // First, try to get a stream with facingMode to get permission and device labels
         try {
+          // Get initial stream with facingMode to ensure we have permission
+          const tempStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          })
+          // Stop the temp stream immediately
+          tempStream.getTracks().forEach(track => track.stop())
+          
+          // Now enumerate devices (labels will be available after permission)
           const devices = await navigator.mediaDevices.enumerateDevices()
           const videoDevices = devices.filter(device => device.kind === 'videoinput')
-          console.log(`[Scanner] Found ${videoDevices.length} video devices:`, videoDevices.map(d => ({ id: d.deviceId, label: d.label })))
+          console.log(`[Scanner] Found ${videoDevices.length} video devices`)
           
-          // Find rear-facing camera (usually has "back" or "rear" in label, or is the last one)
-          const rearCamera = videoDevices.find(device => 
-            device.label.toLowerCase().includes('back') || 
-            device.label.toLowerCase().includes('rear') ||
-            device.label.toLowerCase().includes('environment')
-          ) || videoDevices[videoDevices.length - 1] // Fallback to last camera (usually rear)
+          // Find rear-facing camera - check labels for keywords
+          let rearCamera = videoDevices.find(device => {
+            const label = device.label.toLowerCase()
+            return label.includes('back') || 
+                   label.includes('rear') || 
+                   label.includes('environment') ||
+                   label.includes('facing back')
+          })
           
-          if (rearCamera) {
+          // If no rear camera found by label, try to find by deviceId pattern
+          // On many devices, rear camera is the last one or has a specific pattern
+          if (!rearCamera && videoDevices.length > 1) {
+            // Often the rear camera is the last device, or we can check deviceId patterns
+            rearCamera = videoDevices[videoDevices.length - 1]
+            console.log(`[Scanner] Using last device as rear camera fallback`)
+          }
+          
+          if (rearCamera && rearCamera.deviceId) {
             console.log(`[Scanner] Selected rear camera: ${rearCamera.label || rearCamera.deviceId}`)
             stream = await navigator.mediaDevices.getUserMedia({
               video: {
@@ -411,8 +430,8 @@ export function BarcodeScanner({
               },
             })
           } else {
-            // Fallback to facingMode if device selection fails
-            console.log(`[Scanner] No rear camera found, using facingMode: environment`)
+            // Fallback to facingMode
+            console.log(`[Scanner] Using facingMode: environment as fallback`)
             stream = await navigator.mediaDevices.getUserMedia({
               video: {
                 facingMode: 'environment',
@@ -423,7 +442,7 @@ export function BarcodeScanner({
             })
           }
         } catch (deviceError) {
-          console.warn('[Scanner] Device enumeration failed, using facingMode:', deviceError)
+          console.warn('[Scanner] Device selection failed, using facingMode:', deviceError)
           // Fallback to facingMode
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
