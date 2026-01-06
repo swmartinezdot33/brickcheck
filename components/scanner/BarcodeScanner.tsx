@@ -384,29 +384,80 @@ export function BarcodeScanner({
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       console.log(`[Scanner] Device type: ${isMobile ? 'MOBILE' : 'DESKTOP'}`)
 
-      // Get camera stream with optimal settings
-      // MOBILE: Use environment (rear) camera
-      // DESKTOP: Use user (front) camera
-      const facingMode = isMobile ? 'environment' : 'user'
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode,
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          frameRate: { ideal: 30, min: 15 },
-        },
+      let stream: MediaStream
+      
+      if (isMobile) {
+        // On mobile, explicitly list devices and select rear camera
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const videoDevices = devices.filter(device => device.kind === 'videoinput')
+          console.log(`[Scanner] Found ${videoDevices.length} video devices:`, videoDevices.map(d => ({ id: d.deviceId, label: d.label })))
+          
+          // Find rear-facing camera (usually has "back" or "rear" in label, or is the last one)
+          const rearCamera = videoDevices.find(device => 
+            device.label.toLowerCase().includes('back') || 
+            device.label.toLowerCase().includes('rear') ||
+            device.label.toLowerCase().includes('environment')
+          ) || videoDevices[videoDevices.length - 1] // Fallback to last camera (usually rear)
+          
+          if (rearCamera) {
+            console.log(`[Scanner] Selected rear camera: ${rearCamera.label || rearCamera.deviceId}`)
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: { exact: rearCamera.deviceId },
+                width: { ideal: 1920, min: 1280 },
+                height: { ideal: 1080, min: 720 },
+                frameRate: { ideal: 30, min: 15 },
+              },
+            })
+          } else {
+            // Fallback to facingMode if device selection fails
+            console.log(`[Scanner] No rear camera found, using facingMode: environment`)
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: 'environment',
+                width: { ideal: 1920, min: 1280 },
+                height: { ideal: 1080, min: 720 },
+                frameRate: { ideal: 30, min: 15 },
+              },
+            })
+          }
+        } catch (deviceError) {
+          console.warn('[Scanner] Device enumeration failed, using facingMode:', deviceError)
+          // Fallback to facingMode
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1920, min: 1280 },
+              height: { ideal: 1080, min: 720 },
+              frameRate: { ideal: 30, min: 15 },
+            },
+          })
+        }
+      } else {
+        // Desktop: use front camera
+        console.log(`[Scanner] Requesting front camera (desktop)`)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            frameRate: { ideal: 30, min: 15 },
+          },
+        })
       }
-
-      console.log(`[Scanner] Requesting camera with facingMode: ${facingMode}`)
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
 
       // Log actual camera info
       const videoTracks = stream.getVideoTracks()
       if (videoTracks.length > 0) {
         const settings = videoTracks[0].getSettings()
+        const track = videoTracks[0]
+        const capabilities = track.getCapabilities()
         console.log(`[Scanner] Camera settings:`, settings)
+        console.log(`[Scanner] Camera deviceId: ${settings.deviceId}`)
+        console.log(`[Scanner] Camera label: ${track.label}`)
+        console.log(`[Scanner] Camera facingMode: ${settings.facingMode || 'unknown'}`)
         console.log(`[Scanner] Actual camera resolution: ${settings.width}x${settings.height}`)
       }
 
@@ -433,9 +484,15 @@ export function BarcodeScanner({
           // Method 2: ZXing (most reliable, works with our video element)
           const codeReader = new BrowserQRCodeReader()
           const devices = await codeReader.listVideoInputDevices()
-          console.log('[Scanner] Available devices:', devices)
-          const deviceId = devices[0]?.deviceId || 'default'
-          console.log(`[Scanner] Using device: ${deviceId}`)
+          console.log('[Scanner] ZXing available devices:', devices)
+          
+          // Try to find the same device we're using, or use the first one
+          const videoTracks = stream.getVideoTracks()
+          const currentDeviceId = videoTracks[0]?.getSettings().deviceId
+          const matchingDevice = devices.find(d => d.deviceId === currentDeviceId)
+          const deviceId = matchingDevice?.deviceId || devices[0]?.deviceId || 'default'
+          
+          console.log(`[Scanner] Using ZXing device: ${deviceId} (current stream device: ${currentDeviceId})`)
           await startZXing(stream, deviceId)
         } catch (err2) {
           console.error('[Scanner] All detection methods failed:', err2)
